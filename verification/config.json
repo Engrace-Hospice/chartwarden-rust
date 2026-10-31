@@ -1,0 +1,9 @@
+{
+  "upstream": {
+    "repository": "Engrace-Hospice/chartwarden",
+    "ref": "9e0899a77cf78928d9965c35bc6bd3bafe8471d7"
+  },
+  "mode": "read-only",
+  "productionConnectionsAllowed": false,
+  "outputDirectory": "verification/output"
+}
