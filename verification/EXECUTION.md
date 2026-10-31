@@ -87,6 +87,9 @@ CI shards them (`UNIT_SHARDS=4`, `LIVE_SHARDS=8`).
 
 ## CI (`.github/workflows/verification.yml`)
 
+**Manual only** (`workflow_dispatch`): it does not run on push or pull request. Start it from the Actions tab when
+independent evidence is wanted; everything it does also runs locally with the commands above.
+
 `static` → typecheck, self-tests, inventory, determinism · `list` ×6 → `discover` (+ retention) →
 `unit` ×4 and `live` ×8 · `catalog` · `report` (every shard must report; integrity verdict).
 

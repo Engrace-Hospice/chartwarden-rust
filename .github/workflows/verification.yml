@@ -8,10 +8,9 @@
 #   - Nothing here is a deployment; outputs are evidence artifacts.
 name: M00 verification
 
+# Manual only: nothing runs on push or pull request. Start it from Actions → "M00 verification" → Run workflow.
+# The harness runs locally with the same commands (see verification/EXECUTION.md).
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
