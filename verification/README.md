@@ -20,10 +20,29 @@ Do not run this tool against production data. It only reads source files and Git
 
 ## Current implementation status
 
-- Implemented on the correction branch: pinned source SHA check; dirty checkout labeling; declared module inventory; TypeScript AST import discovery across apps and packages; unresolved route candidate findings; escaped-colon path normalization; declared table ownership; canonical JSON output, checksums, and initial self-tests.
-- Not implemented: full import resolution and forbidden-edge checks; verified complete route coverage and runtime registration; PostgreSQL catalog and RLS inspection; full test discovery and execution; formal JSON schemas; CI integration; P1 reproduction and fixes. Self-tests have been committed but not executed by this assistant.
+Validated by execution against the pinned checkout on 2026-10-31 (Bun 1.4.4, TypeScript 5.9).
 
-All unavailable observations are marked `UNKNOWN` or explicitly described as pending. The current output is **preliminary**, not an approved M00 baseline. This branch is awaiting execution against the pinned checkout and must not be merged on the basis of code review alone.
+| Area | Status | Evidence at the pinned SHA |
+| --- | --- | --- |
+| Module inventory | Implemented | 41 modules, 658 declared tables, no duplicate owners, no missing code paths |
+| Import discovery (`verification/src/inventory-v2.ts`) | Implemented | TypeScript AST over `apps/` and `packages/`, including multi-line, re-export, dynamic, `require`, `import x = require()` and type-position `import("x").T`; test files included because upstream's boundary rules apply to them |
+| Import resolution (`verification/src/dependencies.ts`) | Implemented | Relative paths, workspace `exports` (incl. `*` patterns), npm and builtins; 0 unresolved; deep imports that bypass `exports` are flagged |
+| Forbidden-edge detection | Implemented | Evaluates upstream's own `architecture/.dependency-cruiser.cjs` `forbidden` rules (70) with an independent engine; unsupported matcher keys are reported, never skipped. 0 violations, matching `bun run arch:boundaries` (dependency-cruiser 16) |
+| Cross-check vs dependency-cruiser | Done manually | Identical internal edge set: 29,942 file→file edges in common, 0 missed |
+| Cycles | Implemented | Iterative Tarjan SCC at file and module level; 0 cycles |
+| Module edge classification | Implemented | Each module→module edge labelled `dependsOn`, `helper` (LEAF/FOUNDATION_HELPER, ADR-0005 D4) or `undeclared`; 69 / 11 / 0 |
+| Orphan production files | Implemented | 53 files no module `codePath` covers (tests and LEAF packages excluded) — reported as findings for manifest review |
+| Static routes | Implemented | 1,889 registrations (receiver `app\|scope\|server\|fastify\|instance\|router` with ≥2 args); 1,887 literal, all documented in OpenAPI after `::` normalisation; 2 `UNRESOLVED_ROUTE` (templated FHIR route, DoseSpot webhook constant) |
+| Negative controls | Implemented | 22 self-tests; planted boundary, AI-block, vendor-SDK and cycle violations in a scratch copy were all reported |
+| Determinism | Verified | Two runs produce byte-identical exports (only `run-manifest.json` carries a timestamp) |
+
+Not implemented yet: runtime route registration and auth metadata; PostgreSQL catalog and RLS comparison; upstream test discovery/execution and wiring of stable test IDs (`findMissingTests`); formal JSON schemas; CI workflow; dependency-cruiser cross-check as an automated step; P1 reproduction and fixes.
+
+The output is **preliminary**, not an approved M00 baseline.
+
+### Trust note
+
+The inventory `import()`s upstream `architecture/module-manifest.ts` and `require()`s `architecture/.dependency-cruiser.cjs` (and its `module-manifest.cjs`) to read the policy. That executes upstream code, so only run it against a checkout you trust — the pinned SHA, not an arbitrary branch.
 
 ## Safety
 

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, dirname } from "node:path";
 import { pathToFileURL } from "node:url";
+import { dependencyFindings, evaluateRules, findCycles, loadUpstreamRules, loadWorkspace, modulesForPath, moduleGraph, resolveEdges } from "./dependencies";
 
 export type Finding = { code: string; file: string; line: number; detail: string };
 export type ImportEdge = { from: string; specifier: string; line: number; kind: string };
@@ -10,15 +11,19 @@ export type Route = { method: string; path: string | null; expression: string; m
 const digest = (s: string) => createHash("sha256").update(s).digest("hex");
 const json = (v: unknown) => JSON.stringify(v, null, 2) + "\n";
 const ignored = new Set([".git", "node_modules", "dist", "build", ".next", "coverage", ".turbo"]);
-export function walk(dir: string): string[] {
+export const isTestFile = (path: string) => /\.(test|spec)\./.test(path);
+/** All TypeScript sources under dir. Test files are included only when asked (they are subject to the
+ *  upstream import-boundary rules, but are never route registrations). */
+export function walk(dir: string, includeTests = false): string[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true }).sort((a,b)=>a.name.localeCompare(b.name)).flatMap(e => {
     if (ignored.has(e.name)) return [];
     const p=join(dir,e.name);
-    if (e.isDirectory()) return walk(p);
-    return e.isFile() && /\.(ts|tsx|mts|cts)$/.test(e.name) && !/\.(test|spec)\./.test(e.name) ? [p] : [];
+    if (e.isDirectory()) return walk(p, includeTests);
+    return e.isFile() && /\.(ts|tsx|mts|cts)$/.test(e.name) && (includeTests || !isTestFile(e.name)) ? [p] : [];
   });
 }
+export const ROUTE_RECEIVERS = new Set(["app", "scope", "server", "fastify", "instance", "router"]);
 const position = (sf: ts.SourceFile, n: ts.Node) => sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1;
 export function normalizeOpenApiPath(path: string): string {
   // Fastify double-colon escapes a literal colon, e.g. /foo/::bulk-approve.
@@ -40,6 +45,9 @@ export function scanSource(src: string, file: string): { imports: ImportEdge[]; 
   function visit(n: ts.Node) {
     if (ts.isImportDeclaration(n) && n.moduleSpecifier) addImport(n.moduleSpecifier,n,"import");
     if (ts.isExportDeclaration(n) && n.moduleSpecifier) addImport(n.moduleSpecifier,n,"export");
+    // Type-position imports, e.g. `deps?: import("./unlock-guard").UnlockGuard` — real compile-time edges.
+    if (ts.isImportTypeNode(n) && ts.isLiteralTypeNode(n.argument) && ts.isStringLiteral(n.argument.literal)) addImport(n.argument.literal,n,"import-type");
+    if (ts.isImportEqualsDeclaration(n) && ts.isExternalModuleReference(n.moduleReference)) addImport(n.moduleReference.expression,n,"import-equals");
     if (ts.isCallExpression(n)) {
       if (n.expression.kind===ts.SyntaxKind.ImportKeyword && n.arguments[0]) addImport(n.arguments[0],n,"dynamic-import");
       if (ts.isIdentifier(n.expression) && n.expression.text==="require" && n.arguments[0]) addImport(n.arguments[0],n,"require");
@@ -47,7 +55,9 @@ export function scanSource(src: string, file: string): { imports: ImportEdge[]; 
         const receiver=n.expression.expression.getText(sf);
         // Registration-like calls are candidates, not proof of runtime registration.
         // Limit to backend route files or common Fastify receiver names to avoid counting arbitrary collection methods.
-        if (file.startsWith("apps/backend/src/") && (/(route|router|app|scope|server|fastify)/i.test(receiver) || /routes?\//.test(file))) {
+        // Only an exact Fastify-instance receiver with (path, handler|options) arguments is a registration
+        // candidate; Map/Set/Headers lookups such as `cache.get(id)` in route files are not routes.
+        if (file.startsWith("apps/backend/src/") && ROUTE_RECEIVERS.has(receiver) && n.arguments.length >= 2) {
           const arg=n.arguments[0],path=staticPath(arg),method=n.expression.name.text.toUpperCase();
           routes.push({method,path,expression:arg.getText(sf).slice(0,200),module,file,line:position(sf,n),openapi:"UNKNOWN",runtimeRegistered:"UNKNOWN",auth:"UNKNOWN"});
           if (path===null) findings.push({code:"UNRESOLVED_ROUTE",file,line:position(sf,n),detail:`${method} ${arg.getText(sf).slice(0,160)}`});
@@ -112,13 +122,33 @@ async function main() {
   for(const m of modules) for(const p of m.codePaths) if(!existsSync(join(source,p))) findings.push({code:"MISSING_CODE_PATH",file:"architecture/module-manifest.ts",line:0,detail:`${m.id}: ${p}`});
   const ids=new Set(modules.map((m:any)=>m.id));
   for(const m of modules) for(const d of m.dependsOn) if(!ids.has(d)) findings.push({code:"UNKNOWN_DEPENDENCY",file:"architecture/module-manifest.ts",line:0,detail:`${m.id} -> ${d}`});
-  const paths=[...walk(join(source,"apps")),...walk(join(source,"packages"))];
+  const paths=[...walk(join(source,"apps"),true),...walk(join(source,"packages"),true)];
   const imports:ImportEdge[]=[],routes:Route[]=[];
   for(const p of paths) {
     const rel=relative(source,p).replaceAll("\\","/");
     const scanned=scanSource(readFileSync(p,"utf8"),rel);
-    imports.push(...scanned.imports);routes.push(...scanned.routes);findings.push(...scanned.findings);
+    imports.push(...scanned.imports);
+    if(!isTestFile(rel)){routes.push(...scanned.routes);findings.push(...scanned.findings);}
+    else findings.push(...scanned.findings.filter(f=>f.code!=="UNRESOLVED_ROUTE"));
   }
+  // M00-003: resolve every import to a file/package, then evaluate upstream's own forbidden rules.
+  const relPaths=paths.map(p=>relative(source,p).replaceAll("\\","/"));
+  // Ownership applies to production source only: test files/test-support dirs and the LEAF packages
+  // (shared/types/domain/ui, importable by everyone) are intentionally outside every module's codePaths.
+  const leaves:string[]=[...(manifest.LEAF_PACKAGES??[])];
+  const isTestSupport=(p:string)=>isTestFile(p)||/(^|\/)(__tests__|__mocks__|test|tests|e2e)\//.test(p);
+  for(const rel of relPaths){
+    if(isTestSupport(rel)||leaves.some(l=>rel===l||rel.startsWith(l+"/"))) continue;
+    if(modulesForPath(rel,modules).length===0) findings.push({code:"FILE_WITHOUT_MODULE_OWNER",file:rel,line:0,detail:"no module codePath covers this production file"});
+  }
+  const workspace=loadWorkspace(source);
+  const edges=resolveEdges(source,imports,modules,workspace);
+  const rules=loadUpstreamRules(source);
+  const {violations,unsupported}=evaluateRules(edges,rules);
+  const fileCycles=findCycles(edges.filter(e=>e.targetKind==="internal"&&e.to).map(e=>({from:e.from,to:e.to!})));
+  const graph=moduleGraph(edges,modules,[...(manifest.LEAF_PACKAGES??[]),...(manifest.FOUNDATION_HELPER_PACKAGES??[])]);
+  findings.push(...dependencyFindings(edges,violations,unsupported,fileCycles));
+  for(const e of graph.actual.filter(e=>e.basis==="undeclared")) findings.push({code:"UNDECLARED_MODULE_EDGE",file:"architecture/module-manifest.ts",line:0,detail:`${e.from} -> ${e.to} (${e.imports} imports)`});
   const openapiPath=join(source,"docs/api/openapi.json");
   const openapi=existsSync(openapiPath)?JSON.parse(readFileSync(openapiPath,"utf8")):{paths:{}};
   findings.push(...compareRoutes(routes,openapi));
@@ -129,7 +159,7 @@ async function main() {
   for(const m of modules) for(const table of m.ownedTables) owners.set(table,[...(owners.get(table)??[]),m.id]);
   const artifacts:Record<string,unknown>={
     "modules.json":{sourceCommit:sha,modules},
-    "dependencies.json":{sourceCommit:sha,declared:modules.flatMap((m:any)=>m.dependsOn.map((to:number)=>({from:m.id,to}))),imports,note:"AST-extracted workspace imports; module resolution and forbidden-edge analysis pending"},
+    "dependencies.json":{sourceCommit:sha,declared:modules.flatMap((m:any)=>m.dependsOn.map((to:number)=>({from:m.id,to}))),moduleEdges:graph.actual,declaredButUnused:graph.declaredUnused,moduleCycles:graph.moduleCycles,fileCycles,ruleViolations:violations,rulesEvaluated:rules.length,rulesNotEvaluated:unsupported,edges,note:"Imports resolved by an independent resolver; policy = upstream architecture/.dependency-cruiser.cjs forbidden rules, evaluated here (not by dependency-cruiser)."},
     "routes.json":{sourceCommit:sha,routes,note:"AST route candidates; runtime registration remains UNKNOWN"},
     "database-ownership.json":{sourceCommit:sha,tables:[...owners].sort(([a],[b])=>a.localeCompare(b)).map(([table,ownerIds])=>({table,ownerIds,rls:"UNKNOWN",catalogVerified:false})),note:"Manifest only; database catalog pending"},
     "findings.json":{sourceCommit:sha,findings}
@@ -137,9 +167,9 @@ async function main() {
   const out=join(project,config.outputDirectory,sha);mkdirSync(out,{recursive:true});
   const checksums:Record<string,string>={};
   for(const [name,data] of Object.entries(artifacts)){const s=json(data);writeFileSync(join(out,name),s);checksums[name]=digest(s);}
-  const summary=`# M00 preliminary static inventory\n\nSource SHA: ${sha}\n\nModules: ${modules.length}\nDeclared tables: ${owners.size}\nAST imports: ${imports.length}\nRoute candidates: ${routes.length}\nUnresolved routes: ${findings.filter(f=>f.code==="UNRESOLVED_ROUTE").length}\nFindings: ${findings.length}\n\n**NOT AN APPROVED BASELINE.** Module dependency resolution, runtime routes, database catalog, tests and CI gates remain pending.\n`;
+  const summary=`# M00 preliminary static inventory\n\nSource SHA: ${sha}\n\nModules: ${modules.length}\nDeclared tables: ${owners.size}\nAST imports: ${imports.length}\nRoute candidates: ${routes.length}\nUnresolved routes: ${findings.filter(f=>f.code==="UNRESOLVED_ROUTE").length}\nForbidden edges: ${violations.length}\nImport cycles: ${fileCycles.length}\nUndeclared module edges: ${graph.actual.filter(e=>e.basis==="undeclared").length}\nFindings: ${findings.length}\n\n**NOT AN APPROVED BASELINE.** Runtime routes, database catalog, tests and CI gates remain pending.\n`;
   writeFileSync(join(out,"summary.md"),summary);checksums["summary.md"]=digest(summary);
-  const run={sourceCommit:sha,sourceDirty:dirty,approvedBaselineEligible:!dirty,sourceDiffHash:dirty?digest(git("diff","HEAD")+"\n"+git("ls-files","--others","--exclude-standard")):null,tool:"m00-ast-inventory-v1",bunVersion:Bun.version,typescriptVersion:ts.version,configHash:digest(configText),startedAt:new Date().toISOString(),checksums,limitations:["No database catalog","No runtime route proof","No test execution","No module dependency resolution"]};
+  const run={sourceCommit:sha,sourceDirty:dirty,approvedBaselineEligible:!dirty,sourceDiffHash:dirty?digest(git("diff","HEAD")+"\n"+git("ls-files","--others","--exclude-standard")):null,tool:"m00-ast-inventory-v2",bunVersion:Bun.version,typescriptVersion:ts.version,configHash:digest(configText),startedAt:new Date().toISOString(),checksums,limitations:["No database catalog","No runtime route proof","No test execution","Dependency policy evaluated by an independent engine; not yet cross-checked against dependency-cruiser in CI"]};
   writeFileSync(join(out,"run-manifest.json"),json(run));
   console.log(`M00 preliminary inventory: ${modules.length} modules, ${imports.length} imports, ${routes.length} route candidates, ${findings.length} findings. Dirty=${dirty}. Output: ${out}`);
 }
