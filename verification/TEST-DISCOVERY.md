@@ -38,7 +38,22 @@ The upstream checkout must be pinned to SHA `9e0899a77cf78928d9965c35bc6bd3bafe8
 
 - Parsers are tested against captured Vitest 4.1.12 and Playwright 1.62 output (`verification/__tests__/fixtures/`).
 - `--vitest-project dom`: 5,233 tests in 350 s; Playwright: 119 tests across 9 projects, repo-relative IDs; 1 real `DUPLICATE_TEST_ID`.
-- Full unsharded Vitest listing takes well over 30 min on a 2-CPU machine; full-run totals are pending.
+- Full unsharded Vitest listing (63 min on a 2-CPU machine) + static reconciliation:
+
+  | Measure | Value |
+  | --- | --- |
+  | Test files on disk (`*.test.ts(x)` in apps, packages, scripts/__tests__) | 2,484 |
+  | Files with runner-listed tests | 2,468 |
+  | Vitest tests listed (`node` 29,694 / `dom` 5,233) | 34,927 |
+  | Statically skipped (15 `it.todo`, 1 `it.skip`, 1 in `describe.skip`) | 17 |
+  | Inventory total | 34,944 |
+  | `BLOCKED` (live, no PostgreSQL) / `NOT_RUN` / `SKIPPED` | 6,991 / 27,936 / 17 |
+  | Playwright (9 projects) | 119 |
+  | Findings: `DUPLICATE_TEST_ID` / `GUARDED_BLOCK_NOT_LISTED` / `TEST_FILE_WITHOUT_DISCOVERED_TESTS` | 37 / 25 / 16 |
+
+  The 25 guarded blocks and 16 empty files are suites gated on a local Valkey, Docker, nginx or an opt-in flag
+  that placeholder URLs cannot satisfy; they are reported, not silently dropped. For comparison only (not
+  imported as a verdict), the 2026-10-27 audit reported 15 TODO tests — matching the 15 found here.
 
 ## Known limitations
 
