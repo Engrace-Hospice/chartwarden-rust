@@ -11,6 +11,8 @@ Clone or check out that exact commit locally:
 ```bash
 git clone https://github.com/Engrace-Hospice/chartwarden.git ../chartwarden
 git -C ../chartwarden checkout 9e0899a77cf78928d9965c35bc6bd3bafe8471d7
+bun install
+bun run verify:selftest
 bun run verify:inventory --source ../chartwarden
 ```
 
@@ -18,10 +20,10 @@ Do not run this tool against production data. It only reads source files and Git
 
 ## Current implementation status
 
-- Implemented: pinned source SHA check; clean checkout check; declared module inventory; declared dependency edges and raw backend imports; static literal route inventory with OpenAPI cross-check; declared table ownership; canonical JSON output and SHA-256 checksums.
-- Not implemented: full import resolution and forbidden-edge checks; dynamic/runtime route registration; PostgreSQL catalog and RLS inspection; test discovery and execution; formal JSON schemas; CI integration; P1 reproduction and fixes.
+- Implemented on the correction branch: pinned source SHA check; dirty checkout labeling; declared module inventory; TypeScript AST import discovery across apps and packages; unresolved route candidate findings; escaped-colon path normalization; declared table ownership; canonical JSON output, checksums, and initial self-tests.
+- Not implemented: full import resolution and forbidden-edge checks; verified complete route coverage and runtime registration; PostgreSQL catalog and RLS inspection; full test discovery and execution; formal JSON schemas; CI integration; P1 reproduction and fixes. Self-tests have been committed but not executed by this assistant.
 
-All unavailable observations are marked `UNKNOWN` or explicitly described as pending. The current output is **preliminary**, not an approved M00 baseline.
+All unavailable observations are marked `UNKNOWN` or explicitly described as pending. The current output is **preliminary**, not an approved M00 baseline. This branch is awaiting execution against the pinned checkout and must not be merged on the basis of code review alone.
 
 ## Safety
 
