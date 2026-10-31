@@ -1,0 +1,9 @@
+{
+  "name": "chartwarden-rust-verification",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verify:inventory": "bun run verification/src/inventory.ts",
+    "verify:selftest": "bun test verification"
+  }
+}
