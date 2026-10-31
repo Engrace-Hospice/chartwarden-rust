@@ -19,7 +19,7 @@ The upstream checkout must be pinned to SHA `9e0899a77cf78928d9965c35bc6bd3bafe8
 - A static TypeScript scan of every `*.test.ts(x)` records `.skip` / `.todo` / `xit` tests as `SKIPPED` (vitest's list mode omits them) and reports `GUARDED_BLOCK_NOT_LISTED` and `TEST_FILE_WITHOUT_DISCOVERED_TESTS` so nothing disappears silently.
 - Duplicate full names get `#2`, `#3` ordinals and a `DUPLICATE_TEST_ID` finding instead of aborting the inventory (upstream has at least one).
 - Timeout: `--timeout-ms` or `discovery.timeoutMs` in config.json; default 2 h. `--vitest-project <name>` shards the Vitest listing (reconciliation and `discoveryComplete` require an unsharded run).
-- Converts runner-discovered cases to `runner::[project::]file::suite › test` identities.
+- Converts runner-discovered cases to `runner::[project::]file::suite > test` (Vitest's own full name; Playwright titles joined the same way) identities.
 - Emits `verification/output/<sha>/test-results.json` and `test-discovery-manifest.json`.
 - Reports missing runner output, malformed JSON, duplicate IDs and runner errors instead of inventing test counts.
 - Classifies discovered `*.live.test.*` cases as `BLOCKED` while PostgreSQL is absent; other discovered cases are `NOT_RUN`. These are **discovery classifications**, not execution outcomes.
@@ -48,4 +48,4 @@ Static scan gives stable IDs only to skipped tests with literal titles; others a
 
 Discovery now uses the installed local Vitest/Playwright entrypoints, not `bun x` (which can download packages). The subprocess receives a restricted environment allowlist rather than inherited application secrets. Runner listing still executes upstream configuration and can run arbitrary code; enforce network isolation and an unprivileged disposable worker at CI level. The discovery-only payload always has `approvedBaselineEligible: false`; a successful listing cannot certify an M00 baseline.
 
-The pinned checkout must have its dependencies installed before discovery. The test runner's JSON format still needs live validation, and the CLI path for Playwright must be verified against the actual installed version.
+The pinned checkout must have its dependencies installed before discovery (`bun install --ignore-scripts --frozen-lockfile`). Parsers are validated against Vitest 4.1.12 and Playwright 1.62; a runner upgrade must re-capture the fixtures.
