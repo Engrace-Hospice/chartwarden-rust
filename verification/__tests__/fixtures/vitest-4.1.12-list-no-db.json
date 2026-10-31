@@ -1,0 +1,47 @@
+[
+  {
+    "name": "claimAdmissionCodes > passes recorded codes through",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "claimAdmissionCodes > is null for unrecorded codes, never an invented default",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "claimAdmissionCodes > drops a value outside the NUBC set instead of passing it to a federal claim",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > is a blocking, regulatory-required rule",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > passes when both codes are recorded",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > skips (not applicable) when the context carries no admission-code facts",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > fails when the type is not recorded",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > fails when the point of origin is not recorded",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > fails when the both is not recorded",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  }
+]

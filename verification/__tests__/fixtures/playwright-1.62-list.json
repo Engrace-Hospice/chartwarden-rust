@@ -1,0 +1,317 @@
+{
+  "config": {
+    "rootDir": "/repo/e2e/specs",
+    "projects": [
+      {
+        "name": "chromium",
+        "testDir": "/repo/e2e/specs"
+      },
+      {
+        "name": "viewport-320",
+        "testDir": "/repo/e2e/specs"
+      },
+      {
+        "name": "viewport-375",
+        "testDir": "/repo/e2e/specs"
+      },
+      {
+        "name": "viewport-768",
+        "testDir": "/repo/e2e/specs"
+      },
+      {
+        "name": "viewport-1024",
+        "testDir": "/repo/e2e/specs"
+      },
+      {
+        "name": "viewport-1440",
+        "testDir": "/repo/e2e/specs"
+      },
+      {
+        "name": "viewport-1920",
+        "testDir": "/repo/e2e/specs"
+      },
+      {
+        "name": "admin-console",
+        "testDir": "/repo/e2e/specs"
+      },
+      {
+        "name": "portal",
+        "testDir": "/repo/e2e/specs"
+      }
+    ]
+  },
+  "suites": [
+    {
+      "title": "admission.spec.ts",
+      "file": "admission.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Admission",
+          "file": "admission.spec.ts",
+          "line": 59,
+          "column": 6,
+          "specs": [
+            {
+              "title": "main path: direct-intake wizard creates an admission for a real patient",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "57651d46c5b669da1368-52a1d930753d73b23a93",
+              "file": "admission.spec.ts",
+              "line": 60,
+              "column": 3
+            },
+            {
+              "title": "the wizard gates each step on its own required field",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "57651d46c5b669da1368-947b694d4df9731aa6e9",
+              "file": "admission.spec.ts",
+              "line": 97,
+              "column": 3
+            },
+            {
+              "title": "step 1 also gates on the admission type and the point of origin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "57651d46c5b669da1368-2d1f8babd15e669db112",
+              "file": "admission.spec.ts",
+              "line": 122,
+              "column": 3
+            },
+            {
+              "title": "accessibility: the direct-intake wizard has no WCAG 2A/AA violations",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "57651d46c5b669da1368-fd1c782f0452d6677d62",
+              "file": "admission.spec.ts",
+              "line": 138,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "assessments.spec.ts",
+      "file": "assessments.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Assessments",
+          "file": "assessments.spec.ts",
+          "line": 74,
+          "column": 6,
+          "specs": [
+            {
+              "title": "main path: a recorded decline reaches the significant-change queue and is acknowledged",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8ea4daa14b82f1edf62d-280f9956db4fe92107e5",
+              "file": "assessments.spec.ts",
+              "line": 75,
+              "column": 3
+            },
+            {
+              "title": "failure/rollback path: the Record button stays disabled on an incomplete PPS capture, and Cancel commits nothing",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8ea4daa14b82f1edf62d-98d6de5ff5711f89d71b",
+              "file": "assessments.spec.ts",
+              "line": 120,
+              "column": 3
+            },
+            {
+              "title": "the significant-change queue is accessible (WCAG 2.1 A/AA)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "8ea4daa14b82f1edf62d-ba7fc8753e1b6aef1763",
+              "file": "assessments.spec.ts",
+              "line": 165,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth.spec.ts",
+      "file": "auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication",
+          "file": "auth.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "main path: sign in, select org, land on the shell",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-b3cb0bde05bf234f1f50",
+              "file": "auth.spec.ts",
+              "line": 7,
+              "column": 3
+            },
+            {
+              "title": "denied path: wrong password shows an inline error, no navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-06db766c42f96b9277af",
+              "file": "auth.spec.ts",
+              "line": 21,
+              "column": 3
+            },
+            {
+              "title": "sign-out returns an authenticated session to /login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-01878ab292b8247014e8",
+              "file": "auth.spec.ts",
+              "line": 33,
+              "column": 3
+            },
+            {
+              "title": "accessibility: the sign-in card has no WCAG 2A/AA violations",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-85909f814d5c55ebd26c",
+              "file": "auth.spec.ts",
+              "line": 42,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": []
+}
