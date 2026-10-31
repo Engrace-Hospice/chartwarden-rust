@@ -7,6 +7,7 @@ import {
   classifyExecution,
   compareInventory,
   disambiguate,
+  needsServices,
   parsePlaywright,
   parseVitest,
   reconcile,
@@ -118,6 +119,21 @@ describe("static scan and reconciliation (nothing disappears silently)", () => {
   test("a test file with nothing discovered is a finding", () => {
     const r = reconcile([], ["apps/x/__tests__/empty.test.ts"], new Map(), () => undefined);
     expect(r.findings).toEqual([{ code: "TEST_FILE_WITHOUT_DISCOVERED_TESTS", file: "apps/x/__tests__/empty.test.ts", detail: expect.any(String) }]);
+  });
+});
+
+describe("service-dependent test files", () => {
+  test("detected by content, not only by the .live naming convention — regression for misfiled DB suites", () => {
+    // upstream: packages/db/migrations/__tests__/rls-isolation.test.ts, apps/backend/__tests__/gap-097-…-live.test.ts
+    expect(needsServices("packages/db/migrations/__tests__/rls-isolation.test.ts", "const DB_URL = process.env.CHARTWARDEN_TEST_DATABASE_URL;")).toBe(true);
+    expect(needsServices("apps/backend/__tests__/gap-097-tenant-export-approval-live.test.ts", "")).toBe(true);
+    expect(needsServices("apps/x/__tests__/queue.test.ts", "process.env.CHARTWARDEN_TEST_REDIS_URL")).toBe(true);
+    expect(needsServices("apps/x/__tests__/pure.test.ts", "expect(1).toBe(1)")).toBe(false);
+  });
+  test("BLOCKED follows the service-file set when given", () => {
+    const t: TestCase = { id: "x", runner: "vitest", file: "packages/db/migrations/__tests__/rls-isolation.test.ts", fullName: "x", status: "NOT_RUN", source: "runner" };
+    expect(classifyExecution([t], {}, { postgresReady: false, valkeyReady: false })[0].status).toBe("NOT_RUN");
+    expect(classifyExecution([t], {}, { postgresReady: false, valkeyReady: false }, new Set([t.file]))[0].status).toBe("BLOCKED");
   });
 });
 

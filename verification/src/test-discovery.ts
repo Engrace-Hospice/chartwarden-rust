@@ -14,7 +14,7 @@
 import ts from "typescript";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 
 export type Status = "PASS" | "FAIL" | "ERROR" | "BLOCKED" | "SKIPPED" | "NOT_RUN" | "NOT_APPLICABLE";
 export type TestCase = {
@@ -243,15 +243,20 @@ export function compareInventory(previous: string[], current: string[], approved
   return previous.filter((id) => !cur.has(id) && !retired.has(id)).sort();
 }
 
-export const isLiveTestFile = (file: string) => /\.live\.test\.|\.integration\.test\./.test(file);
+/** Naming convention only — upstream also has DB suites named `*-live.test.ts` or not named at all. */
+export const isLiveTestFile = (file: string) => /[.-]live\.test\.|\.integration\.test\./.test(file);
+export const SERVICE_ENV_RE = /CHARTWARDEN_TEST_(DATABASE|REDIS)_URL/;
+/** A test file needs ephemeral services if its name says so OR its source reads a service URL. */
+export const needsServices = (file: string, src: string) => isLiveTestFile(file) || SERVICE_ENV_RE.test(src);
 
 /** Discovery-time classification. Runner results always win; nothing becomes PASS without one. */
-export function classifyExecution(discovered: TestCase[], results: Record<string, Status>, environment: { postgresReady: boolean; valkeyReady: boolean }) {
+export function classifyExecution(discovered: TestCase[], results: Record<string, Status>, environment: { postgresReady: boolean; valkeyReady: boolean }, serviceFiles?: Set<string>) {
+  const isService = (f: string) => (serviceFiles ? serviceFiles.has(f) : isLiveTestFile(f));
   return discovered.map((t) => {
     const status = results[t.id];
     if (status) return { ...t, status };
     if (t.status === "SKIPPED") return t;
-    if (isLiveTestFile(t.file) && !environment.postgresReady) return { ...t, status: "BLOCKED" as const, reason: "Ephemeral PostgreSQL not provisioned; suite not executed" };
+    if (isService(t.file) && !environment.postgresReady) return { ...t, status: "BLOCKED" as const, reason: "Needs ephemeral PostgreSQL/Valkey; not executed" };
     return { ...t, status: "NOT_RUN" as const, reason: "Not executed; discovery only" };
   });
 }
@@ -286,7 +291,7 @@ async function main() {
   const root = resolve(import.meta.dir, "../..");
   const cfgText = readFileSync(join(root, "verification/config.json"), "utf8"), cfg = JSON.parse(cfgText);
   const sourceArg = flag("--source");
-  if (!sourceArg) throw Error("Usage: bun run verify:discover --source /path/to/chartwarden [--timeout-ms N] [--vitest-project name]... [--skip-playwright]");
+  if (!sourceArg) throw Error("Usage: bun run verify:discover --source /path/to/chartwarden [--timeout-ms N] [--vitest-project name]... [--vitest-shard i/n] [--save-vitest-list file] [--vitest-list file]... [--skip-playwright]");
   const source = resolve(sourceArg), sha = git(source, "rev-parse", "HEAD");
   if (sha !== cfg.upstream.ref) throw Error("Untrusted upstream SHA: " + sha);
   const dirty = Boolean(git(source, "status", "--porcelain", "--untracked-files=all"));
@@ -294,6 +299,15 @@ async function main() {
   const timeoutMs = Number(flag("--timeout-ms") ?? cfg.discovery?.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw Error("--timeout-ms must be a positive number");
   const vitestProjects = flags("--vitest-project");
+  // Pre-captured `vitest list --json=<file>` outputs (e.g. one per CI shard). Read instead of re-listing.
+  const vitestLists = flags("--vitest-list").map((p) => resolve(p));
+  for (const p of vitestLists) if (!existsSync(p)) throw Error("--vitest-list file not found: " + p);
+  if (vitestLists.length && vitestProjects.length) throw Error("--vitest-list and --vitest-project are mutually exclusive");
+  // CI sharding: list one slice, keep the raw runner output, and combine slices later with --vitest-list.
+  const vitestShard = flag("--vitest-shard");
+  if (vitestShard && !/^\d+\/\d+$/.test(vitestShard)) throw Error("--vitest-shard must look like 2/4");
+  const saveVitestList = flag("--save-vitest-list");
+  const sharded = vitestProjects.length > 0 || Boolean(vitestShard);
   const output = join(root, cfg.outputDirectory, sha);
   mkdirSync(output, { recursive: true });
 
@@ -304,7 +318,7 @@ async function main() {
   const specs: { runner: "vitest" | "playwright"; command: string[]; enabled: boolean; why?: string }[] = [
     {
       runner: "vitest",
-      command: ["bun", "run", "--bun", "./node_modules/vitest/vitest.mjs", "list", `--json=${vitestJson}`, ...vitestProjects.flatMap((p) => ["--project", p])],
+      command: ["bun", "run", "--bun", "./node_modules/vitest/vitest.mjs", "list", `--json=${vitestJson}`, ...vitestProjects.flatMap((p) => ["--project", p]), ...(vitestShard ? [`--shard=${vitestShard}`] : [])],
       enabled: true,
     },
     {
@@ -322,8 +336,20 @@ async function main() {
   for (const spec of specs) {
     if (!spec.enabled) {
       // A runner that is configured but cannot be listed is an ERROR, never NOT_APPLICABLE.
-      const configuredButUnavailable = spec.runner === "playwright" && Boolean(pwConfig);
+      // An explicit --skip-playwright (CI listing slices) is NOT_APPLICABLE and leaves discovery incomplete.
+      const configuredButUnavailable = spec.runner === "playwright" && Boolean(pwConfig) && !process.argv.includes("--skip-playwright");
       runs.push({ runner: spec.runner, status: configuredButUnavailable ? "ERROR" : "NOT_APPLICABLE", command: spec.command, exitCode: null, timedOut: false, durationMs: 0, stderr: spec.why ?? "", tests: 0 });
+      continue;
+    }
+    if (spec.runner === "vitest" && vitestLists.length) {
+      try {
+        const tests = vitestLists.flatMap((p) => parseVitest(JSON.parse(readFileSync(p, "utf8")), source));
+        if (!tests.length) throw Error("pre-captured Vitest listings contain zero tests");
+        discovered.push(...tests);
+        runs.push({ runner: "vitest", status: "PASS", command: ["(pre-captured)", ...vitestLists.map((p) => `${p.split("/").pop()} sha256=${sha256(readFileSync(p, "utf8"))}`)], exitCode: 0, timedOut: false, durationMs: 0, stderr: "", tests: tests.length });
+      } catch (e) {
+        runs.push({ runner: "vitest", status: "ERROR", command: ["(pre-captured)", ...vitestLists], exitCode: null, timedOut: false, durationMs: 0, stderr: String(e), tests: 0 });
+      }
       continue;
     }
     try {
@@ -335,7 +361,9 @@ async function main() {
       let raw: unknown;
       if (spec.runner === "vitest") {
         if (!existsSync(vitestJson)) throw Error("vitest list exited 0 but wrote no JSON file");
-        raw = JSON.parse(readFileSync(vitestJson, "utf8"));
+        const text = readFileSync(vitestJson, "utf8");
+        raw = JSON.parse(text);
+        if (saveVitestList) { mkdirSync(dirname(resolve(saveVitestList)), { recursive: true }); writeFileSync(resolve(saveVitestList), text); }
       } else {
         raw = JSON.parse(r.stdout); // reporter JSON is the only stdout content for --list --reporter=json
       }
@@ -354,7 +382,7 @@ async function main() {
 
   // Static reconciliation is only meaningful for an unsharded Vitest run.
   const vitestRan = runs.some((r) => r.runner === "vitest" && r.status === "PASS");
-  if (vitestRan && vitestProjects.length === 0) {
+  if (vitestRan && !sharded) {
     const testFiles = listTestFiles(source);
     const scans = new Map(testFiles.map((f) => [f, scanTestFile(readFileSync(join(source, f), "utf8"), f)]));
     const projectOf = (f: string) => (/\.dom\.test\.tsx$/.test(f) ? "dom" : discovered.find((t) => t.file === f)?.project ?? "node");
@@ -362,24 +390,25 @@ async function main() {
     discovered.push(...rec.extra);
     findings.push(...rec.findings);
   } else if (vitestRan) {
-    findings.push({ code: "STATIC_RECONCILIATION_SKIPPED", file: "", detail: "Vitest was sharded with --vitest-project; static reconciliation runs only on a full listing" });
+    findings.push({ code: "STATIC_RECONCILIATION_SKIPPED", file: "", detail: "Vitest listing was sharded (--vitest-project/--vitest-shard); reconciliation runs only on a full listing — combine shards with --vitest-list" });
   }
   const dedup = disambiguate(discovered);
   findings.push(...dedup.findings);
   findings.sort((a, b) => `${a.code}|${a.file}|${a.detail}`.localeCompare(`${b.code}|${b.file}|${b.detail}`));
 
-  const tests = classifyExecution(dedup.tests, {}, { postgresReady: false, valkeyReady: false });
+  const serviceDependentFiles = listTestFiles(source).filter((f) => needsServices(f, readFileSync(join(source, f), "utf8")));
+  const tests = classifyExecution(dedup.tests, {}, { postgresReady: false, valkeyReady: false }, new Set(serviceDependentFiles));
   const counts = Object.fromEntries(["PASS", "FAIL", "ERROR", "BLOCKED", "SKIPPED", "NOT_RUN", "NOT_APPLICABLE"].map((s) => [s, tests.filter((t) => t.status === s).length]));
-  const discoveryComplete = !dirty && vitestProjects.length === 0 && runs.every((r) => r.status === "PASS" || r.status === "NOT_APPLICABLE");
+  const discoveryComplete = !dirty && !sharded && !process.argv.includes("--skip-playwright") && runs.every((r) => r.status === "PASS" || r.status === "NOT_APPLICABLE");
   const payload = {
     sourceCommit: sha, dirty, approvedBaselineEligible: false, discoveryComplete,
     discoveryEnvironment: Object.keys(DISCOVERY_ENV).map((k) => `${k}=<unreachable .invalid placeholder>`),
     discovery: runs.map(({ stderr, ...r }) => ({ ...r, stderrTail: stderr.slice(-1000) })),
-    counts, findings, tests,
+    counts, findings, serviceDependentFiles, tests,
   };
   const content = canonical(payload);
   writeFileSync(join(output, "test-results.json"), content);
-  const manifest = { sourceCommit: sha, dirty, configHash: sha256(cfgText), bunVersion: Bun.version, typescriptVersion: ts.version, timeoutMs, vitestProjects, discoveryChecksums: { "test-results.json": sha256(content) }, timestamp: new Date().toISOString(), note: "Discovery only; no tests executed. NOT_RUN/BLOCKED/SKIPPED are not passing." };
+  const manifest = { sourceCommit: sha, dirty, configHash: sha256(cfgText), bunVersion: Bun.version, typescriptVersion: ts.version, timeoutMs, vitestProjects, vitestShard: vitestShard ?? null, vitestLists: vitestLists.map((p) => p.split("/").pop()), discoveryChecksums: { "test-results.json": sha256(content) }, timestamp: new Date().toISOString(), note: "Discovery only; no tests executed. NOT_RUN/BLOCKED/SKIPPED are not passing." };
   writeFileSync(join(output, "test-discovery-manifest.json"), canonical(manifest));
   console.log(JSON.stringify({ discovered: tests.length, counts, findings: findings.length, runners: runs.map((r) => ({ runner: r.runner, status: r.status, tests: r.tests, seconds: Math.round(r.durationMs / 1000), reason: r.status === "PASS" ? undefined : r.stderr.slice(0, 300) })), output }, null, 2));
   if (runs.some((r) => r.status === "ERROR")) process.exitCode = 1;
