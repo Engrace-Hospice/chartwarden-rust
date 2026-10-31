@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve, join, relative, isAbsolute } from "node:path";
+import { resolve, join } from "node:path";
 
 export type Status = "PASS" | "FAIL" | "ERROR" | "BLOCKED" | "SKIPPED" | "NOT_RUN" | "NOT_APPLICABLE";
 export type TestCase = { id:string; runner:"vitest"|"playwright"; file:string; fullName:string; project?:string; status:Status; reason?:string; durationMs?:number };
@@ -14,6 +14,7 @@ export function stableId(runner:string,file:string,fullName:string,project?:stri
 function fileOf(raw:string,source:string) {
   const f=raw.replaceAll("\\","/");
   const root=source.replaceAll("\\","/").replace(/\/$/,"");
+  if(f.startsWith("/") && !f.startsWith(root+"/"))throw Error("Runner emitted test path outside pinned checkout: "+f);
   return f.startsWith(root+"/")?f.slice(root.length+1):f.replace(/^\.\//,"");
 }
 export function parseVitest(raw:unknown,source:string):TestCase[] {
@@ -88,7 +89,10 @@ export function parseJsonOutput(stdout:string):unknown {
   return JSON.parse(text.slice(pos));
 }
 export async function runner(source:string,args:string[],timeoutMs=180000):Promise<{exitCode:number|null;stdout:string;stderr:string;timedOut:boolean}> {
-  const proc=Bun.spawn(args,{cwd:source,stdout:"pipe",stderr:"pipe",env:{...process.env,CI:"true",DATABASE_URL:"",REDIS_URL:"",VALKEY_URL:"",NODE_ENV:"test"}});
+  const allowed=["PATH","HOME","TMPDIR","TEMP","TMP","SYSTEMROOT","WINDIR","USERPROFILE","LANG","LC_ALL","TERM"];
+  const env:Record<string,string>={CI:"true",NODE_ENV:"test",DATABASE_URL:"",REDIS_URL:"",VALKEY_URL:"",BUN_INSTALL_CACHE_DIR:source+"/node_modules/.cache/bun"};
+  for(const key of allowed)if(process.env[key])env[key]=process.env[key]!;
+  const proc=Bun.spawn(args,{cwd:source,stdout:"pipe",stderr:"pipe",env});
   let timedOut=false;
   const timer=setTimeout(()=>{timedOut=true;proc.kill();},timeoutMs);
   const [stdout,stderr,exitCode]=await Promise.all([new Response(proc.stdout).text(),new Response(proc.stderr).text(),proc.exited]);
@@ -108,10 +112,11 @@ async function main(){
   const source=resolve(process.argv[i+1]),sha=git(source,"rev-parse","HEAD");
   if(sha!==cfg.upstream.ref)throw Error("Untrusted upstream SHA: "+sha);
   const dirty=Boolean(git(source,"status","--porcelain","--untracked-files=all"));
+  if(!existsSync(join(source,"node_modules","vitest","vitest.mjs")))throw Error("Vitest must be installed in pinned checkout; refusing package-manager auto-download");
   const output=join(root,cfg.outputDirectory,sha);mkdirSync(output,{recursive:true});
   const specs:{runner:"vitest"|"playwright";command:string[];enabled:boolean}[]=[
-    {runner:"vitest",command:["bun","x","vitest","list","--json"],enabled:true},
-    {runner:"playwright",command:["bun","x","playwright","test","--list","--reporter=json"],enabled:existsSync(join(source,"playwright.config.ts"))||existsSync(join(source,"playwright.config.mts"))||existsSync(join(source,"playwright.config.js"))}
+    {runner:"vitest",command:["bun","run","--bun","./node_modules/vitest/vitest.mjs","list","--json"],enabled:true},
+    {runner:"playwright",command:["bun","run","--bun","./node_modules/@playwright/test/cli.js","test","--list","--reporter=json"],enabled:existsSync(join(source,"playwright.config.ts"))||existsSync(join(source,"playwright.config.mts"))||existsSync(join(source,"playwright.config.js"))}
   ];
   const discovered:TestCase[]=[],runs:Discovery[]=[];
   for(const spec of specs){
@@ -127,7 +132,7 @@ async function main(){
   }
   unique(discovered);
   const tests=classifyExecution(discovered,{}, {postgresReady:false,valkeyReady:false});
-  const payload={sourceCommit:sha,dirty,approvedBaselineEligible:!dirty&&runs.every(r=>r.status==="PASS"||r.status==="NOT_APPLICABLE"),discovery:runs,tests,counts:Object.fromEntries(["PASS","FAIL","ERROR","BLOCKED","SKIPPED","NOT_RUN","NOT_APPLICABLE"].map(s=>[s,tests.filter(t=>t.status===s).length]))};
+  const payload={sourceCommit:sha,dirty,approvedBaselineEligible:false,discoveryComplete:!dirty&&runs.every(r=>r.status==="PASS"||r.status==="NOT_APPLICABLE"),discovery:runs,tests,counts:Object.fromEntries(["PASS","FAIL","ERROR","BLOCKED","SKIPPED","NOT_RUN","NOT_APPLICABLE"].map(s=>[s,tests.filter(t=>t.status===s).length]))};
   const content=canonical(payload);writeFileSync(join(output,"test-results.json"),content);
   const manifest={sourceCommit:sha,dirty,configHash:sha256(cfgText),bunVersion:Bun.version,discoveryChecksums:{"test-results.json":sha256(content)},timestamp:new Date().toISOString(),note:"Discovery only; no tests executed. NOT_RUN/BLOCKED are not passing."};
   writeFileSync(join(output,"test-discovery-manifest.json"),canonical(manifest));
