@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "verify:inventory": "bun run verification/src/inventory-v2.ts",
-    "verify:selftest": "bun test verification/__tests__"
+    "verify:selftest": "bun test verification/__tests__",
+    "verify:discover": "bun run verification/src/test-discovery.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
