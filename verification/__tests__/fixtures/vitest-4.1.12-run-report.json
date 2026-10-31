@@ -1,0 +1,265 @@
+{
+  "numFailedTests": 4,
+  "numPassedTests": 437,
+  "success": false,
+  "testResults": [
+    {
+      "name": "/repo/scripts/__tests__/bootstrap.test.ts",
+      "status": "passed",
+      "message": "",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "seam + eraser boot gate (§3.18 fail-closed)"
+          ],
+          "title": "REQUIRED_SEAMS declares every required seam with an owner + deny-stub (§3.18.2)",
+          "status": "passed",
+          "duration": 9,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "seam + eraser boot gate (§3.18 fail-closed)"
+          ],
+          "title": "validateSeams() applies deny-stub defaults so an unregistered seam boots fail-closed",
+          "status": "passed",
+          "duration": 1,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "seam + eraser boot gate (§3.18 fail-closed)"
+          ],
+          "title": "validateSeams() keeps a module's real registration over the deny-stub",
+          "status": "passed",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "seam + eraser boot gate (§3.18 fail-closed)"
+          ],
+          "title": "validateErasers() throws when a PHI data class has no eraser (no deny-stub default)",
+          "status": "passed",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "seam + eraser boot gate (§3.18 fail-closed)"
+          ],
+          "title": "validateErasers() passes once every eraser stub is wired",
+          "status": "passed",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "seam + eraser boot gate (§3.18 fail-closed)"
+          ],
+          "title": "bootSeams() wires + validates seams and erasers end-to-end",
+          "status": "passed",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "seam + eraser boot gate (§3.18 fail-closed)"
+          ],
+          "title": "buildServer() boots and serves /health",
+          "status": "passed",
+          "duration": 68,
+          "failureMessages": []
+        }
+      ]
+    },
+    {
+      "name": "/repo/apps/backend/__tests__/crypto-label-compat-errors.test.ts",
+      "status": "passed",
+      "message": "",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "unknown and legacy labels fail exactly like a tampered ciphertext"
+          ],
+          "title": "M36 v1 body",
+          "status": "passed",
+          "duration": 8,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "unknown and legacy labels fail exactly like a tampered ciphertext"
+          ],
+          "title": "M36 ring AAD",
+          "status": "passed",
+          "duration": 2,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "unknown and legacy labels fail exactly like a tampered ciphertext"
+          ],
+          "title": "M24",
+          "status": "passed",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "unknown and legacy labels fail exactly like a tampered ciphertext"
+          ],
+          "title": "M35",
+          "status": "passed",
+          "duration": 1,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "unknown and legacy labels fail exactly like a tampered ciphertext"
+          ],
+          "title": "M34",
+          "status": "passed",
+          "duration": 1,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "unknown and legacy labels fail exactly like a tampered ciphertext"
+          ],
+          "title": "M23",
+          "status": "passed",
+          "duration": 1,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "unknown and legacy labels fail exactly like a tampered ciphertext"
+          ],
+          "title": "M5",
+          "status": "passed",
+          "duration": 1,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [],
+          "title": "planted undiscovered test",
+          "status": "passed",
+          "duration": 1,
+          "failureMessages": []
+        }
+      ]
+    },
+    {
+      "name": "/repo/apps/backend/__tests__/authz-validation.test.ts",
+      "status": "failed",
+      "message": "planted load failure",
+      "assertionResults": []
+    },
+    {
+      "name": "/repo/apps/backend/__tests__/admission-intake.test.ts",
+      "status": "failed",
+      "message": "",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "M6-T07 — §7.1 receive & triage referral"
+          ],
+          "title": "W-RF-01: create lands a referral in `received` and emits m6.referral.received",
+          "status": "passed",
+          "duration": 116,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "M6-T07 — §7.1 receive & triage referral"
+          ],
+          "title": "W-RF-02: re-ingesting a known externalReferralId returns 409 with no duplicate row",
+          "status": "passed",
+          "duration": 29,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "M6-T07 — §7.1 receive & triage referral"
+          ],
+          "title": "W-RF-03: triage `eligible` starts review and emits m6.referral.review_started",
+          "status": "passed",
+          "duration": 22,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "M6-T07 — §7.1 receive & triage referral"
+          ],
+          "title": "W-RF-04: resolved + qualified referral converts exactly once and drafts an admission",
+          "status": "passed",
+          "duration": 27,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "M6-T07 — §7.1 receive & triage referral"
+          ],
+          "title": "edge: accepting a referral that was never triaged returns 409 INELIGIBLE_NOT_TRIAGED",
+          "status": "passed",
+          "duration": 20,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "M6-T07 — §7.1 receive & triage referral"
+          ],
+          "title": "edge: concurrent triage of the same referral trips the optimistic lock (409 VERSION_MISMATCH)",
+          "status": "passed",
+          "duration": 20,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": [
+            "M6-T07 — §7.2 admission wizard + R-AC-01 activation gate"
+          ],
+          "title": "W-AD-01: a fresh draft admission's activation gate lists all preconditions missing",
+          "status": "failed",
+          "duration": 30,
+          "failureMessages": [
+            "AssertionError: expected 'planted' to be 'broken' // Object.is equality\n    at native\n    at acceptedAdmission (/repo/apps/backend/__tests__/admission-intake.test.ts:183:21)\n    at /repo/apps/backend/__tests__/admission-intake.test.ts:407:31\n    at processTicksAndRejections (native)"
+          ]
+        },
+        {
+          "ancestorTitles": [
+            "M6-T07 — §7.2 admission wizard + R-AC-01 activation gate"
+          ],
+          "title": "W-AD-02/03/04/05: completing the bundle flips the gate green and activate succeeds",
+          "status": "failed",
+          "duration": 39,
+          "failureMessages": [
+            "AssertionError: expected 'planted' to be 'broken' // Object.is equality\n    at native\n    at acceptedAdmission (/repo/apps/backend/__tests__/admission-intake.test.ts:183:21)\n    at /repo/apps/backend/__tests__/admission-intake.test.ts:424:31\n    at processTicksAndRejections (native)"
+          ]
+        },
+        {
+          "ancestorTitles": [
+            "M6-T07 — §7.2 admission wizard + R-AC-01 activation gate"
+          ],
+          "title": "edge: activating with NOR missing returns 412 ADMISSION_NOT_READY with structured blockers",
+          "status": "failed",
+          "duration": 35,
+          "failureMessages": [
+            "AssertionError: expected 'planted' to be 'broken' // Object.is equality\n    at native\n    at acceptedAdmission (/repo/apps/backend/__tests__/admission-intake.test.ts:183:21)\n    at /repo/apps/backend/__tests__/admission-intake.test.ts:452:31\n    at processTicksAndRejections (native)"
+          ]
+        },
+        {
+          "ancestorTitles": [
+            "M6-T07 — §7.2 admission wizard + R-AC-01 activation gate"
+          ],
+          "title": "regression: an Election Statement draft row never satisfies readiness or activation",
+          "status": "failed",
+          "duration": 25,
+          "failureMessages": [
+            "AssertionError: expected 'planted' to be 'broken' // Object.is equality\n    at native\n    at acceptedAdmission (/repo/apps/backend/__tests__/admission-intake.test.ts:183:21)\n    at /repo/apps/backend/__tests__/admission-intake.test.ts:536:31\n    at processTicksAndRejections (native)"
+          ]
+        }
+      ]
+    }
+  ]
+}

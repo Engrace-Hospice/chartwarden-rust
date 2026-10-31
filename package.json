@@ -5,9 +5,15 @@
   "scripts": {
     "verify:inventory": "bun run verification/src/inventory-v2.ts",
     "verify:selftest": "bun test verification/__tests__",
-    "verify:discover": "bun run verification/src/test-discovery.ts"
+    "verify:discover": "bun run verification/src/test-discovery.ts",
+    "verify:execute": "bun run verification/src/test-execution.ts",
+    "verify:merge": "bun run verification/src/test-execution.ts --merge",
+    "verify:catalog": "bun run verification/src/catalog.ts",
+    "verify:retention": "bun run verification/src/test-retention.ts",
+    "verify:typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.4",
     "typescript": "^5.9.3"
   }
 }

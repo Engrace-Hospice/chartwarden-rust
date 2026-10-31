@@ -1,0 +1,46 @@
+name: Pinned upstream checkout
+description: >
+  Check out Engrace-Hospice/chartwarden at the SHA pinned in verification/config.json, prove that commit
+  is on upstream main (the trust boundary for executing upstream code), and install its dependencies
+  without lifecycle scripts.
+inputs:
+  install:
+    description: Install upstream dependencies (bun install --ignore-scripts --frozen-lockfile)
+    default: "true"
+outputs:
+  sha:
+    description: The pinned upstream commit
+    value: ${{ steps.pin.outputs.sha }}
+runs:
+  using: composite
+  steps:
+    - id: pin
+      shell: bash
+      run: |
+        repo=$(jq -r '.upstream.repository' verification/config.json)
+        sha=$(jq -r '.upstream.ref' verification/config.json)
+        [[ "$repo" == "Engrace-Hospice/chartwarden" ]] || { echo "::error::config.json upstream.repository must be Engrace-Hospice/chartwarden (got $repo)"; exit 1; }
+        [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::config.json upstream.ref must be a full 40-character commit SHA"; exit 1; }
+        echo "repo=$repo" >> "$GITHUB_OUTPUT"
+        echo "sha=$sha" >> "$GITHUB_OUTPUT"
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        repository: ${{ steps.pin.outputs.repo }}
+        ref: ${{ steps.pin.outputs.sha }}
+        path: upstream
+        fetch-depth: 1
+        persist-credentials: false
+    - name: Trust boundary — pinned SHA must be on upstream main
+      shell: bash
+      run: |
+        git -C upstream fetch --quiet --filter=blob:none --no-tags origin main
+        if ! git -C upstream merge-base --is-ancestor "${{ steps.pin.outputs.sha }}" FETCH_HEAD; then
+          echo "::error::Pinned SHA ${{ steps.pin.outputs.sha }} is not on upstream main; refusing to execute its code"
+          exit 1
+        fi
+        test "$(git -C upstream rev-parse HEAD)" = "${{ steps.pin.outputs.sha }}"
+    - name: Install upstream dependencies (no lifecycle scripts)
+      if: inputs.install == 'true'
+      shell: bash
+      working-directory: upstream
+      run: bun install --ignore-scripts --frozen-lockfile

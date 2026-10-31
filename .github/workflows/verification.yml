@@ -1,0 +1,255 @@
+# CW-RUST-M00 verification baseline.
+#
+# Trust and isolation:
+#   - Only read permission; no repository secrets are referenced anywhere in this workflow.
+#   - Upstream code (module manifest, dependency-cruiser config, test files, migrations) is executed only at
+#     the SHA pinned in verification/config.json, and only after proving that SHA is on upstream main.
+#   - Databases are throwaway containers on localhost; the harness refuses any non-loopback service URL.
+#   - Nothing here is a deployment; outputs are evidence artifacts.
+name: M00 verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m00-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: 1.4.4
+  UNIT_SHARDS: 4
+  LIVE_SHARDS: 8
+  LIST_SHARDS: 6
+  OUT: verification/output
+
+jobs:
+  static:
+    name: Self-tests, typecheck, static inventory
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { persist-credentials: false }
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with: { bun-version: "${{ env.BUN_VERSION }}" }
+      - run: bun install --frozen-lockfile
+      - run: bun run verify:typecheck
+      - run: bun run verify:selftest
+      - id: up
+        uses: ./.github/actions/pinned-upstream
+        with: { install: "false" }
+      - name: Static inventory (modules, routes, dependencies vs upstream dependency-cruiser rules)
+        run: bun run verify:inventory --source upstream
+      - name: Determinism — second run must produce byte-identical exports
+        run: |
+          d="$OUT/${{ steps.up.outputs.sha }}"
+          mkdir -p /tmp/first && cp "$d"/{modules,dependencies,routes,database-ownership,findings}.json /tmp/first/
+          bun run verify:inventory --source upstream
+          for f in modules dependencies routes database-ownership findings; do cmp "/tmp/first/$f.json" "$d/$f.json"; done
+          test -z "$(git -C upstream status --porcelain)"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: static-inventory
+          path: |
+            ${{ env.OUT }}/*/modules.json
+            ${{ env.OUT }}/*/dependencies.json
+            ${{ env.OUT }}/*/routes.json
+            ${{ env.OUT }}/*/database-ownership.json
+            ${{ env.OUT }}/*/findings.json
+            ${{ env.OUT }}/*/run-manifest.json
+            ${{ env.OUT }}/*/summary.md
+
+  list:
+    name: Vitest listing ${{ matrix.shard }}/6
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: { shard: [1, 2, 3, 4, 5, 6] }
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { persist-credentials: false }
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with: { bun-version: "${{ env.BUN_VERSION }}" }
+      - run: bun install --frozen-lockfile
+      - uses: ./.github/actions/pinned-upstream
+      - name: List one slice (placeholder .invalid service URLs; no tests are executed)
+        run: >-
+          bun run verify:discover --source upstream --skip-playwright
+          --vitest-shard ${{ matrix.shard }}/${{ env.LIST_SHARDS }}
+          --save-vitest-list lists/vitest-list-${{ matrix.shard }}.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: "vitest-list-${{ matrix.shard }}", path: lists/ }
+
+  discover:
+    name: Combine discovery + retention check
+    needs: list
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { persist-credentials: false }
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with: { bun-version: "${{ env.BUN_VERSION }}" }
+      - run: bun install --frozen-lockfile
+      - id: up
+        uses: ./.github/actions/pinned-upstream
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { pattern: "vitest-list-*", path: lists, merge-multiple: true }
+      - name: Discovery from all listing slices + Playwright listing + static reconciliation
+        run: |
+          test "$(ls lists/vitest-list-*.json | wc -l)" = "$LIST_SHARDS"
+          args=(); for f in lists/vitest-list-*.json; do args+=(--vitest-list "$f"); done
+          bun run verify:discover --source upstream "${args[@]}"
+      - name: Retention — every stored test ID is still discovered or formally retired
+        run: bun run verify:retention --discovery "$OUT/${{ steps.up.outputs.sha }}/test-results.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: discovery
+          path: |
+            ${{ env.OUT }}/*/test-results.json
+            ${{ env.OUT }}/*/test-discovery-manifest.json
+            ${{ env.OUT }}/*/retention-report.json
+
+  catalog:
+    name: PostgreSQL catalog + RLS
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { persist-credentials: false }
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with: { bun-version: "${{ env.BUN_VERSION }}" }
+      - run: bun install --frozen-lockfile
+      - uses: ./.github/actions/pinned-upstream
+      - name: Start throwaway PostgreSQL 18 + pgvector (upstream's image and lock limit)
+        run: |
+          docker run -d --name m00-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=chartwarden_catalog \
+            -p 5432:5432 pgvector/pgvector:pg18 -c max_locks_per_transaction=4096
+          for i in $(seq 1 60); do docker exec m00-pg pg_isready -h 127.0.0.1 -U postgres -d chartwarden_catalog && exit 0; sleep 1; done
+          docker logs m00-pg; exit 1
+      - name: Migrate with upstream's migrator (--strict --schema-only) and compare catalog
+        run: bun run verify:catalog --source upstream --database-url postgres://postgres:postgres@localhost:5432/chartwarden_catalog --migrate
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: database-catalog
+          path: |
+            ${{ env.OUT }}/*/database-catalog.json
+            ${{ env.OUT }}/*/database-catalog.sha256
+
+  unit:
+    name: Unit tests ${{ matrix.shard }}/4
+    needs: discover
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: { shard: [1, 2, 3, 4] }
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { persist-credentials: false }
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with: { bun-version: "${{ env.BUN_VERSION }}" }
+      - run: bun install --frozen-lockfile
+      - id: up
+        uses: ./.github/actions/pinned-upstream
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: discovery, path: "${{ env.OUT }}" }
+      - name: Execute (no service URLs)
+        run: >-
+          bun run verify:execute --source upstream --suite unit
+          --discovery "$OUT/${{ steps.up.outputs.sha }}/test-results.json"
+          --shard ${{ matrix.shard }}/${{ env.UNIT_SHARDS }}
+          --out "executions/unit-${{ matrix.shard }}.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with: { name: "execution-unit-${{ matrix.shard }}", path: "executions/unit-${{ matrix.shard }}.json" }
+
+  live:
+    name: Live DB tests ${{ matrix.shard }}/8
+    needs: discover
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix: { shard: [1, 2, 3, 4, 5, 6, 7, 8] }
+    services:
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "valkey-cli ping" --health-interval 2s --health-timeout 2s --health-retries 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { persist-credentials: false }
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with: { bun-version: "${{ env.BUN_VERSION }}" }
+      - run: bun install --frozen-lockfile
+      - id: up
+        uses: ./.github/actions/pinned-upstream
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: discovery, path: "${{ env.OUT }}" }
+      - name: Start throwaway PostgreSQL 18 + pgvector (one cluster per shard — roles are cluster-wide)
+        run: |
+          docker run -d --name m00-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=chartwarden_test \
+            -p 5432:5432 pgvector/pgvector:pg18 -c max_locks_per_transaction=4096 -c fsync=off -c synchronous_commit=off
+          for i in $(seq 1 60); do docker exec m00-pg pg_isready -h 127.0.0.1 -U postgres -d chartwarden_test && exit 0; sleep 1; done
+          docker logs m00-pg; exit 1
+      - name: Execute (one file at a time; each replays all migrations)
+        run: >-
+          bun run verify:execute --source upstream --suite live
+          --discovery "$OUT/${{ steps.up.outputs.sha }}/test-results.json"
+          --database-url postgres://postgres:postgres@localhost:5432/chartwarden_test
+          --redis-url redis://localhost:6379
+          --shard ${{ matrix.shard }}/${{ env.LIVE_SHARDS }}
+          --out "executions/live-${{ matrix.shard }}.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with: { name: "execution-live-${{ matrix.shard }}", path: "executions/live-${{ matrix.shard }}.json" }
+
+  report:
+    name: Merge results + integrity verdict
+    needs: [static, discover, catalog, unit, live]
+    if: always() && needs.discover.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { persist-credentials: false }
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with: { bun-version: "${{ env.BUN_VERSION }}" }
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: discovery, path: "${{ env.OUT }}" }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { pattern: "execution-*", path: executions, merge-multiple: true }
+      - name: Every shard must have reported
+        run: |
+          have=$(ls executions/*.json 2>/dev/null | wc -l)
+          want=$((UNIT_SHARDS + LIVE_SHARDS))
+          [ "$have" -eq "$want" ] || { echo "::error::expected $want execution shards, found $have"; exit 1; }
+      - name: Merge (integrity findings fail; test failures are recorded, not hidden)
+        run: |
+          disc=$(ls "$OUT"/*/test-results.json)
+          bun run verify:merge --discovery "$disc" executions/*.json | tee merge.json
+          {
+            echo "## M00 verification"
+            echo '```json'
+            cat merge.json | sed -n '/^{/,$p'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: m00-evidence
+          path: |
+            ${{ env.OUT }}/*/test-execution-results.json
+            ${{ env.OUT }}/*/test-execution-results.sha256
