@@ -1,0 +1,592 @@
+[
+  {
+    "name": "claimAdmissionCodes > passes recorded codes through",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "claimAdmissionCodes > is null for unrecorded codes, never an invented default",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "claimAdmissionCodes > drops a value outside the NUBC set instead of passing it to a federal claim",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > is a blocking, regulatory-required rule",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > passes when both codes are recorded",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > skips (not applicable) when the context carries no admission-code facts",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > fails when the type is not recorded",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > fails when the point of origin is not recorded",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "admission_codes_present > fails when the both is not recorded",
+    "file": "/repo/packages/billing/__tests__/admission-codes.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > chartwarden_app is NOBYPASSRLS — otherwise every case below passes vacuously",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > audited writes do NOT recurse through audit_event partitions (regression: 0004 guard)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > org B sees NONE of org A's rows (org-column policy: provider_entity)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > org B sees NONE of org A's rows (join-scoped policy: location)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > rejects a cross-tenant write — org B cannot insert an org-A row (WITH CHECK)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > feature_flag: org B reads the global (NULL) flag but NOT org A's flag",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > org A still sees its OWN row (isolation is not just 'deny everything')",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > break_glass_event: org B sees none of org A's glass; cross-tenant write rejected (M3 §3.5)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > audit_event is append-only to the app role (UPDATE + DELETE both denied)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M38 Terminology — platform RLS, canonical lockdown, as-of coexistence (§9.2/§9.4) > §7.4 chartwarden_app CANNOT write canonical terminology (code_system + concept table)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M38 Terminology — platform RLS, canonical lockdown, as-of coexistence (§9.2/§9.4) > §9.4 platform tables are public-read — identical rows under either tenant context",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M38 Terminology — platform RLS, canonical lockdown, as-of coexistence (§9.2/§9.4) > §9.2 two versions coexist — as-of resolves active at the old date, retired today",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M38 Terminology — platform RLS, canonical lockdown, as-of coexistence (§9.2/§9.4) > §9.4 value_set_tenant_extension is org-scoped — Org A sees its row, Org B sees none",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M38 Terminology — platform RLS, canonical lockdown, as-of coexistence (§9.2/§9.4) > §9.4 Org B cannot write an Org-A tenant extension (WITH CHECK)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M38 Terminology — platform RLS, canonical lockdown, as-of coexistence (§9.2/§9.4) > §3.8 the M4 write-audit trigger fired for the tenant extension write",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §3.7 Org B sees NONE of Org A's channels or messages",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §3.7 Org A still reads its own channel + message (isolation is not deny-all)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §3.7 cross-tenant write rejected — Org B cannot insert an Org-A channel (WITH CHECK)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §3.7 message_attachment (org column since 1075) and notification_delivery (parent join) are org-isolated",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §3.7 FB-T05 write path: Org B sees NONE of Org A's message_receipt fan-out rows",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §3.7 FB-T05 write path: a cross-tenant message_receipt write is rejected (WITH CHECK)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §3.7 alert_rule platform-default (NULL org) is read by every tenant",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §7.4 a system_locked alert_rule cannot be updated or deleted by a tenant",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §3.12 alert_payload_catalog is platform-floor public-read across tenants",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §3.7 presence: a co-worker in the same tenant context can read it; an outsider cannot",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M36 Messaging — org isolation, parent-join children, audit scrub (§3.7–3.9) > §3.9 the M4 write-audit trigger fired for channel + message and scrubbed body_cipher",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M40 MDM — canonical lockdown, overlay isolation, audit (§3.6–3.7 / §7.3–7.4) > §7.4 chartwarden_app CANNOT write canonical MDM (external_physician + facility + payer)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M40 MDM — canonical lockdown, overlay isolation, audit (§3.6–3.7 / §7.3–7.4) > §3.6 canonical is public-read — identical rows under either tenant context",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M40 MDM — canonical lockdown, overlay isolation, audit (§3.6–3.7 / §7.3–7.4) > §7.3 external_physician_tenant_overlay is org-scoped — Org A sees its row, Org B sees none",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M40 MDM — canonical lockdown, overlay isolation, audit (§3.6–3.7 / §7.3–7.4) > §7.3 Org B cannot write an Org-A overlay row (WITH CHECK)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M40 MDM — canonical lockdown, overlay isolation, audit (§3.6–3.7 / §7.3–7.4) > §3.6 merge_request is platform-ops only — chartwarden_app has no grant",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M40 MDM — canonical lockdown, overlay isolation, audit (§3.6–3.7 / §7.3–7.4) > §3.7 the M4 write-audit trigger fired for the overlay write and scrubbed contract_terms",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M5 Patient — cross-tenant isolation, no-DELETE spine, audit scrub (§3.6–3.7 / §9.4) > §9.4 Org A sees ONLY its own patient (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M5 Patient — cross-tenant isolation, no-DELETE spine, audit scrub (§3.6–3.7 / §9.4) > §3.6 Org B cannot INSERT a patient into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M5 Patient — cross-tenant isolation, no-DELETE spine, audit scrub (§3.6–3.7 / §9.4) > §3.6 the patient spine has NO DELETE grant (deaths/merges are state changes, not deletes)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M5 Patient — cross-tenant isolation, no-DELETE spine, audit scrub (§3.6–3.7 / §9.4) > §3.7 the M4 write-audit trigger fired for the patient write and scrubbed the name denylist",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M39 Consent — dual-grant catalog, org-scoped records, audit scrub, eval immutability (§3.5–3.7) > §3.5 consent_type_catalog is platform-shared — Org A and Org B read the same floor",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M39 Consent — dual-grant catalog, org-scoped records, audit scrub, eval immutability (§3.5–3.7) > §7.4 chartwarden_app CANNOT write the platform consent-type floor (dual-grant: writer-role only)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M39 Consent — dual-grant catalog, org-scoped records, audit scrub, eval immutability (§3.5–3.7) > §3.5 consent_record is org-scoped — Org A sees its record, Org B sees none of it",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M39 Consent — dual-grant catalog, org-scoped records, audit scrub, eval immutability (§3.5–3.7) > §3.5 Org B cannot INSERT a consent_record into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M39 Consent — dual-grant catalog, org-scoped records, audit scrub, eval immutability (§3.5–3.7) > §3.7 the M4 write-audit trigger fired for the consent write and scrubbed the PHI denylist",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M39 Consent — dual-grant catalog, org-scoped records, audit scrub, eval immutability (§3.5–3.7) > §3.6/D12 consent_eval_audit is INSERT-only — the immutability trigger denies UPDATE + DELETE",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M6 Admission — cross-tenant isolation, no-DELETE, audit scrub (§3.6–3.7 / §9.3) > §9.3 Org A sees ONLY its own referral (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M6 Admission — cross-tenant isolation, no-DELETE, audit scrub (§3.6–3.7 / §9.3) > §3.6 Org B cannot INSERT a referral into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M6 Admission — cross-tenant isolation, no-DELETE, audit scrub (§3.6–3.7 / §9.3) > §3.6 no M6 table has a DELETE grant for chartwarden_app (supersession via status, not deletes)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M6 Admission — cross-tenant isolation, no-DELETE, audit scrub (§3.6–3.7 / §9.3) > §3.7 the M4 write-audit trigger fired for the referral write and scrubbed the intake-PII denylist",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M8 Encounters — cross-tenant isolation, no-DELETE, audit scrub (§3.3–3.4 / §9.3) > §9.3 Org A sees ONLY its own encounter (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M8 Encounters — cross-tenant isolation, no-DELETE, audit scrub (§3.3–3.4 / §9.3) > §3.3 Org B cannot INSERT an encounter into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M8 Encounters — cross-tenant isolation, no-DELETE, audit scrub (§3.3–3.4 / §9.3) > §3.6 no M8 table has a DELETE grant for chartwarden_app (encounters are voided, never deleted)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M8 Encounters — cross-tenant isolation, no-DELETE, audit scrub (§3.3–3.4 / §9.3) > §8.1 the M4 write-audit trigger fired for the encounter write and scrubbed the free-text PHI denylist",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M9 Clinical Assessments — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §9.4 Org A sees ONLY its own clinical_assessment (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M9 Clinical Assessments — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §3.5 Org B cannot INSERT a clinical_assessment into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M9 Clinical Assessments — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §3.6 clinical_assessment has NO DELETE grant for chartwarden_app (corrections supersede, never delete)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M9 Clinical Assessments — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §3.4 the correction-supersede trigger flips the prior Org-A row to superseded (D9, under RLS)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M9 Clinical Assessments — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §9.4 a correction from Org A cannot supersede an Org B row (never reaches across tenants)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M9 Clinical Assessments — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §9.4 scale_license is org-scoped — Org A sees its PPS license, Org B sees none",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M9 Clinical Assessments — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §8.1 the M4 write-audit trigger fired for the assessment write and scrubbed the data/free-text denylist",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M10 HOPE Engine — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §9.4 Org A sees ONLY its own hope_assessment (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M10 HOPE Engine — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §3.5 Org B cannot INSERT a hope_assessment into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M10 HOPE Engine — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §3.6 hope_assessment has NO DELETE grant for chartwarden_app (corrections supersede, never delete)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M10 HOPE Engine — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §3.4 the correction-supersede trigger flips the prior Org-A row to superseded (under RLS)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M10 HOPE Engine — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §9.4 a correction from Org A cannot supersede an Org B row (defense-in-depth org-match guard)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M10 HOPE Engine — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §9.4 hope_timepoint_schedule is org-scoped — Org A sees its open schedule, Org B sees none",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M10 HOPE Engine — cross-tenant isolation, correction trigger, audit scrub (§9.4 / §3.4–3.6) > §8.1 the M4 write-audit trigger fired for the assessment write and scrubbed the data denylist",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M11 Orders — cross-tenant isolation, no-DELETE, audit scrub (§7.7 / §3.4–3.7 / §9.3) > §9.3 Org A sees ONLY its own order_record (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M11 Orders — cross-tenant isolation, no-DELETE, audit scrub (§7.7 / §3.4–3.7 / §9.3) > §3.5 Org B cannot INSERT an order_record into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M11 Orders — cross-tenant isolation, no-DELETE, audit scrub (§7.7 / §3.4–3.7 / §9.3) > §3.6 order_record has NO DELETE grant for chartwarden_app (orders supersede/discontinue, never delete)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M11 Orders — cross-tenant isolation, no-DELETE, audit scrub (§7.7 / §3.4–3.7 / §9.3) > §3.4 order_signature is org-scoped — Org A sees its signature, Org B sees none",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M11 Orders — cross-tenant isolation, no-DELETE, audit scrub (§7.7 / §3.4–3.7 / §9.3) > §8.1 the M4 write-audit trigger fired for the order write and scrubbed the data denylist",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M12 DoseSpot — cross-tenant isolation, no-DELETE, audit scrub (§3.5 / §3.6 / §7.6 / §9.4) > §3.5 Org A sees ONLY its own medication_order (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M12 DoseSpot — cross-tenant isolation, no-DELETE, audit scrub (§3.5 / §3.6 / §7.6 / §9.4) > §3.5 Org B cannot INSERT a medication_order into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M12 DoseSpot — cross-tenant isolation, no-DELETE, audit scrub (§3.5 / §3.6 / §7.6 / §9.4) > §3.6 medication_order has NO DELETE grant for chartwarden_app (orders supersede/discontinue, never delete)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M12 DoseSpot — cross-tenant isolation, no-DELETE, audit scrub (§3.5 / §3.6 / §7.6 / §9.4) > §3.5 refill_request is org-scoped — Org A sees its refill, Org B sees none",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M12 DoseSpot — cross-tenant isolation, no-DELETE, audit scrub (§3.5 / §3.6 / §7.6 / §9.4) > §7.6 the M4 write-audit trigger fired for the medication_order write and scrubbed the data denylist",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M12 DoseSpot — cross-tenant isolation, no-DELETE, audit scrub (§3.5 / §3.6 / §7.6 / §9.4) > §7.6 the refill_request write-audit trigger scrubbed pharmacy_notes (free-text PHI)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M13 eMAR — cross-tenant isolation, no-DELETE, nested audit scrub (§3.5 / §3.6 / §9.4) > §3.5 Org A sees ONLY its own administration_record (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M13 eMAR — cross-tenant isolation, no-DELETE, nested audit scrub (§3.5 / §3.6 / §9.4) > §3.5 Org B cannot INSERT an administration_record into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M13 eMAR — cross-tenant isolation, no-DELETE, nested audit scrub (§3.5 / §3.6 / §9.4) > §3.6 administration_record has NO DELETE grant for chartwarden_app (administrations supersede/void, never delete)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M13 eMAR — cross-tenant isolation, no-DELETE, nested audit scrub (§3.5 / §3.6 / §9.4) > §3.5 scheduled_dose is org-scoped — Org A sees its dose, Org B sees none",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M13 eMAR — cross-tenant isolation, no-DELETE, nested audit scrub (§3.5 / §3.6 / §9.4) > §3.6 the M4 write-audit trigger scrubbed BOTH the top-level notes AND the nested data.sig_free_text",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M14 IDG — cross-tenant isolation, no-DELETE, nested audit scrub (§3.3 / §9.3 / §9.4) > §3.3 Org A sees ONLY its own idg_decision (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M14 IDG — cross-tenant isolation, no-DELETE, nested audit scrub (§3.3 / §9.3 / §9.4) > §3.3 Org B cannot INSERT an idg_decision into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M14 IDG — cross-tenant isolation, no-DELETE, nested audit scrub (§3.3 / §9.3 / §9.4) > §3.3 idg_decision + idg_patient_packet have NO DELETE grant for chartwarden_app (decisions supersede / packets freeze, never delete)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M14 IDG — cross-tenant isolation, no-DELETE, nested audit scrub (§3.3 / §9.3 / §9.4) > §3.3 idg_meeting + idg_patient_packet are org-scoped — Org A sees its rows, Org B sees none",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M14 IDG — cross-tenant isolation, no-DELETE, nested audit scrub (§3.3 / §9.3 / §9.4) > §3.3 the M4 write-audit trigger scrubbed the nested idg_decision payload narrative (rationaleText), kind passes through",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M14 IDG — cross-tenant isolation, no-DELETE, nested audit scrub (§3.3 / §9.3 / §9.4) > §3.3 the M4 write-audit trigger scrubbed BOTH the top-level cover summary AND the nested built_snapshot keys",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M17 Scheduling — cross-tenant isolation, no-DELETE, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §9.3 Org A sees ONLY its own visit (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M17 Scheduling — cross-tenant isolation, no-DELETE, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §3.5 Org B cannot INSERT a visit into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M17 Scheduling — cross-tenant isolation, no-DELETE, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §3.6 visit + visit_state_history have NO DELETE grant for chartwarden_app (visits void, history is append-only)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M17 Scheduling — cross-tenant isolation, no-DELETE, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §3.4 visit_state_history is org-scoped — Org A sees its transition row, Org B sees none",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M17 Scheduling — cross-tenant isolation, no-DELETE, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §3.6 the M4 write-audit trigger scrubbed the visit free-text denylist; structural columns pass through",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M17 Scheduling — cross-tenant isolation, no-DELETE, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §3.6 the M4 write-audit trigger scrubbed the visit_state_history reason; to_state passes through",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M18 EVV — cross-tenant isolation, no-DELETE, append-only events, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §9.3 Org A sees its own row but Org B sees ZERO across all six owned tables (RLS, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M18 EVV — cross-tenant isolation, no-DELETE, append-only events, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §3.5 Org B cannot INSERT an evv_event into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M18 EVV — cross-tenant isolation, no-DELETE, append-only events, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §9.3 a cross-tenant UPDATE affects ZERO rows — Org B cannot mutate Org A's aggregator submission",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M18 EVV — cross-tenant isolation, no-DELETE, append-only events, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §3.6 chartwarden_app has NO DELETE grant on any of the six owned tables (eraseFn-only destruction)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M18 EVV — cross-tenant isolation, no-DELETE, append-only events, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §3.2/D2 evv_event is append-only — a non-supersede UPDATE is refused; the supersede markers may change",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M18 EVV — cross-tenant isolation, no-DELETE, append-only events, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §3.6 the M4 audit trigger scrubbed evv_event coordinate cipher + accuracy; structural columns pass through",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M18 EVV — cross-tenant isolation, no-DELETE, append-only events, PHI-column audit scrub (§3.5 / §3.6 / §9.3 / §9.4) > §3.6 the M4 audit trigger scrubbed the evv_missing_resolution + aggregator-submission free-text reasons",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M22 Document Management — cross-tenant isolation, no-DELETE, audit scrub (§8.8 / §3.6) > §8.8 Org A sees ONLY its own document (RLS blocks cross-tenant reads, auth stubbed open)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M22 Document Management — cross-tenant isolation, no-DELETE, audit scrub (§8.8 / §3.6) > §8.8 Org B cannot INSERT a document into Org A (WITH CHECK blocks the cross-tenant write)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M22 Document Management — cross-tenant isolation, no-DELETE, audit scrub (§8.8 / §3.6) > §3.2 no DELETE grant on document for chartwarden_app (supersession/void, not deletes)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > M22 Document Management — cross-tenant isolation, no-DELETE, audit scrub (§8.8 / §3.6) > §3.6 the M4 write-audit trigger fired for the document write and scrubbed the title denylist",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > §3.3 structural RLS coverage (migration 0118) > EVERY table carrying organization_id has RLS enabled (migration 0120)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > §3.3 structural RLS coverage (migration 0118) > every org-scoped table also has at least one policy (RLS on + no policy = silently deny-all)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > §3.3 structural RLS coverage (migration 0118) > every RLS table is FORCEd — ownership is not a bypass",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > §3.3 structural RLS coverage (migration 0118) > the 11 platform-only zero-policy tables (migration 0159) each have a reachable policy",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > §3.3 structural RLS coverage (migration 0118) > every partition LEAF has RLS enabled + forced, and no policies of its own",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  },
+  {
+    "name": "RLS cross-tenant isolation — LIVE Postgres (§7.2/§9.3) > §3.3 structural RLS coverage (migration 0118) > a NEWLY created partition is born protected (the event trigger, not 43 helpers)",
+    "file": "/repo/packages/db/migrations/__tests__/rls-isolation.live.test.ts",
+    "projectName": "node"
+  }
+]

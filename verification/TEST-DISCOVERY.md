@@ -14,7 +14,11 @@ The upstream checkout must be pinned to SHA `9e0899a77cf78928d9965c35bc6bd3bafe8
 
 ## Behavior
 
-- Invokes `bun x vitest list --json` and, if a Playwright configuration exists, `bun x playwright test --list --reporter=json`.
+- Invokes the locally installed `vitest list --json=<file>` and `playwright test --list --reporter=json -c <config>` (config searched at the repo root and under `e2e/`). A configured runner that cannot be listed is `ERROR`, never `NOT_APPLICABLE`.
+- Lists with placeholder `CHARTWARDEN_TEST_DATABASE_URL` / `CHARTWARDEN_TEST_REDIS_URL` on unresolvable `.invalid` hosts. Upstream guards ~500 live suites with `describe.skipIf(!DB_URL)`, and `vitest list` omits skipped tests; listing never runs the hooks that connect.
+- A static TypeScript scan of every `*.test.ts(x)` records `.skip` / `.todo` / `xit` tests as `SKIPPED` (vitest's list mode omits them) and reports `GUARDED_BLOCK_NOT_LISTED` and `TEST_FILE_WITHOUT_DISCOVERED_TESTS` so nothing disappears silently.
+- Duplicate full names get `#2`, `#3` ordinals and a `DUPLICATE_TEST_ID` finding instead of aborting the inventory (upstream has at least one).
+- Timeout: `--timeout-ms` or `discovery.timeoutMs` in config.json; default 2 h. `--vitest-project <name>` shards the Vitest listing (reconciliation and `discoveryComplete` require an unsharded run).
 - Converts runner-discovered cases to `runner::[project::]file::suite › test` identities.
 - Emits `verification/output/<sha>/test-results.json` and `test-discovery-manifest.json`.
 - Reports missing runner output, malformed JSON, duplicate IDs and runner errors instead of inventing test counts.
@@ -30,9 +34,15 @@ The upstream checkout must be pinned to SHA `9e0899a77cf78928d9965c35bc6bd3bafe8
 5. Implement actual isolated test execution, architecture-gate retention and per-test outcome reconciliation as a separate change.
 6. Provision disposable PostgreSQL and Valkey in a later phase; do not convert `BLOCKED` into `SKIPPED` or `PASS`.
 
+## Validation at the pinned SHA (2026-10-31)
+
+- Parsers are tested against captured Vitest 4.1.12 and Playwright 1.62 output (`verification/__tests__/fixtures/`).
+- `--vitest-project dom`: 5,233 tests in 350 s; Playwright: 119 tests across 9 projects, repo-relative IDs; 1 real `DUPLICATE_TEST_ID`.
+- Full unsharded Vitest listing takes well over 30 min on a 2-CPU machine; full-run totals are pending.
+
 ## Known limitations
 
-The discovery parser is an initial adapter, not yet validated against actual upstream runner JSON. A clean pinned source is required for approval, but a dirty development checkout is recorded. The run-manifest format is provisional. No CI workflow is included yet.
+Static scan gives stable IDs only to skipped tests with literal titles; others are reported as findings. A clean pinned source is required for approval, but a dirty development checkout is recorded. The run-manifest format is provisional. No CI workflow is included yet.
 
 ## Security and baseline correction
 
