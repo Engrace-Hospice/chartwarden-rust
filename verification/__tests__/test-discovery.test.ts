@@ -37,7 +37,9 @@ describe("Vitest 4.1.12 list --json (real runner output)", () => {
     expect(live(withoutDb)).toBe(0);
     expect(live(listed)).toBe(109);
     expect(DISCOVERY_ENV.CHARTWARDEN_TEST_DATABASE_URL).toContain(".invalid");
-    expect(DISCOVERY_ENV.CHARTWARDEN_TEST_REDIS_URL).toContain(".invalid");
+    // Loopback so local-only BullMQ suites (REDIS_IS_LOCAL) declare their tests; port 1 has no listener.
+    expect(new URL(DISCOVERY_ENV.CHARTWARDEN_TEST_REDIS_URL).hostname).toBe("127.0.0.1");
+    expect(new URL(DISCOVERY_ENV.CHARTWARDEN_TEST_REDIS_URL).port).toBe("1");
   });
 
   test("rejects the nested shape the first adapter assumed, instead of returning zero tests", () => {

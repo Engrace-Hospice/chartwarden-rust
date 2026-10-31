@@ -15,7 +15,7 @@ The upstream checkout must be pinned to SHA `9e0899a77cf78928d9965c35bc6bd3bafe8
 ## Behavior
 
 - Invokes the locally installed `vitest list --json=<file>` and `playwright test --list --reporter=json -c <config>` (config searched at the repo root and under `e2e/`). A configured runner that cannot be listed is `ERROR`, never `NOT_APPLICABLE`.
-- Lists with placeholder `CHARTWARDEN_TEST_DATABASE_URL` / `CHARTWARDEN_TEST_REDIS_URL` on unresolvable `.invalid` hosts. Upstream guards ~500 live suites with `describe.skipIf(!DB_URL)`, and `vitest list` omits skipped tests; listing never runs the hooks that connect.
+- Lists with placeholder service URLs: `CHARTWARDEN_TEST_DATABASE_URL` on an unresolvable `.invalid` host and `CHARTWARDEN_TEST_REDIS_URL=redis://127.0.0.1:1` (loopback, because three BullMQ suites only declare tests when Redis is local; nothing listens on port 1). Upstream guards ~500 live suites with `describe.skipIf(!DB_URL)`, and `vitest list` omits skipped tests; listing never runs the hooks that connect.
 - A static TypeScript scan of every `*.test.ts(x)` records `.skip` / `.todo` / `xit` tests as `SKIPPED` (vitest's list mode omits them) and reports `GUARDED_BLOCK_NOT_LISTED` and `TEST_FILE_WITHOUT_DISCOVERED_TESTS` so nothing disappears silently.
 - Duplicate full names get `#2`, `#3` ordinals and a `DUPLICATE_TEST_ID` finding instead of aborting the inventory (upstream has at least one).
 - Timeout: `--timeout-ms` or `discovery.timeoutMs` in config.json; default 2 h. `--vitest-project <name>` shards the Vitest listing (reconciliation and `discoveryComplete` require an unsharded run).

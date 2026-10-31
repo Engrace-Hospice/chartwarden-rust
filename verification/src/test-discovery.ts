@@ -33,10 +33,15 @@ export type Discovery = { runner: string; status: Status; command: string[]; exi
 export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 export const canonical = (v: unknown) => JSON.stringify(v, null, 2) + "\n";
 
-/** Dummy, unreachable service URLs used only while *listing*. `.invalid` can never resolve (RFC 6761). */
+/**
+ * Placeholder service URLs used only while *listing* (listing collects tests; it never runs the hooks that
+ * connect). The DB host is `.invalid`, which can never resolve (RFC 6761). The Redis placeholder must be a
+ * loopback host because three upstream BullMQ suites only declare their tests when
+ * `REDIS_IS_LOCAL` (localhost/127.0.0.1/[::1]); port 1 has no listener.
+ */
 export const DISCOVERY_ENV: Record<string, string> = {
   CHARTWARDEN_TEST_DATABASE_URL: "postgres://discovery-only.invalid:1/none",
-  CHARTWARDEN_TEST_REDIS_URL: "redis://discovery-only.invalid:1",
+  CHARTWARDEN_TEST_REDIS_URL: "redis://127.0.0.1:1",
 };
 export const DEFAULT_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 
