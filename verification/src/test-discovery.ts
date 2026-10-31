@@ -269,8 +269,11 @@ export function classifyExecution(discovered: TestCase[], results: Record<string
 /* ------------------------------------------------------------- execution */
 
 export async function runner(source: string, args: string[], timeoutMs: number, extraEnv: Record<string, string> = {}) {
-  const allowed = ["PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "WINDIR", "USERPROFILE", "LANG", "LC_ALL", "TERM"];
-  const env: Record<string, string> = { CI: "true", NODE_ENV: "test", DATABASE_URL: "", REDIS_URL: "", VALKEY_URL: "", ...extraEnv };
+  // TZ is pinned and locale variables are never inherited: some upstream test *names* embed
+  // Date#toString() output (e.g. "…GMT+0000 (Coordinated Universal Time)"), so an inherited time zone
+  // would change stable test IDs from machine to machine. UTC matches upstream's CI runners.
+  const allowed = ["PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "WINDIR", "USERPROFILE", "TERM"];
+  const env: Record<string, string> = { CI: "true", NODE_ENV: "test", TZ: "UTC", DATABASE_URL: "", REDIS_URL: "", VALKEY_URL: "", ...extraEnv };
   for (const key of allowed) if (process.env[key]) env[key] = process.env[key]!;
   const started = Date.now();
   const proc = Bun.spawn(args, { cwd: source, stdout: "pipe", stderr: "pipe", env });
