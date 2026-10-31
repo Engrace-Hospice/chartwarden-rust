@@ -56,7 +56,7 @@ upstream test names contain newlines). `retirements.json` lists approved removal
 
 `regulatory-correction` requires `authority` and a `clinical:`, `billing:` or `compliance:` approver
 (ADR-0060 invariant 1). `--update` refuses while any removal is unexplained. The stored inventory is a
-**candidate** (35,063 IDs at `9e0899a`) until the owner approves the M00 baseline.
+**candidate** (35,194 IDs at `9e0899a`) until the owner approves the M00 baseline.
 
 ## Catalog findings
 
@@ -75,7 +75,7 @@ Valkey 7.2 (CI uses `pgvector/pgvector:pg18` and `valkey/valkey:8-alpine`), `max
 
 | Check | Result |
 | --- | --- |
-| Discovery (pre-captured full listing) | 35,063 tests: 7,088 BLOCKED, 27,958 NOT_RUN, 17 SKIPPED |
+| Discovery (full harness run, 44 min) | 35,194 tests: 7,219 BLOCKED, 27,958 NOT_RUN, 17 SKIPPED; 508 service-dependent files |
 | Unit shard 1/50 | 30 files, 459 PASS, every discovered test in those files mapped |
 | Live shard 1/50 (real PG18 + Valkey) | 10 files, 150 PASS in 165 s (≈16 s/file; ~510 service files) |
 | Planted defects | broken assertion → 4 FAIL; load error → 19 ERROR; extra test → `RESULT_NOT_IN_DISCOVERY`; runtime skip with DB → `LIVE_TEST_SKIPPED_WITH_DATABASE`; merge exits 1 |
