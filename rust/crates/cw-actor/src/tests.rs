@@ -573,3 +573,20 @@ fn a_refused_sweep_assertion_does_not_consume_a_replay_slot() {
         "not Replayed"
     );
 }
+
+/// Cross-language golden vector, produced by upstream's Bun signer
+/// (`apps/backend/src/bootstrap/rust-bridge/__tests__/signer-config.test.ts`, "reproduces the cross-language golden
+/// vector"). If either side changes the header, claim names, claim order or encoding, one of the two tests fails.
+#[test]
+fn accepts_the_bun_signer_golden_vector() {
+    const PUB: &str = "6kpsY-KcUgq-9VB7Ey7F-ZVHdq6-vnuSQh7qaRRG0iw";
+    const TOKEN: &str = "eyJhbGciOiJFZERTQSIsImtpZCI6InZlYyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjdy1idW4iLCJhdWQiOiJjdy1ydXN0Iiwic3ViIjoiMTExMTExMTEtMTExMS00MTExLTgxMTEtMTExMTExMTExMTExIiwib3JnIjoiMjIyMjIyMjItMjIyMi00MjIyLTgyMjItMjIyMjIyMjIyMjIyIiwic2lkIjoicy0xIiwiY2xzIjoic3RhZmYiLCJtdGgiOiJHRVQiLCJwdGgiOiIvYXBpL3YxL21lL3Blcm1pc3Npb25zIiwicmlkIjoici0xIiwianRpIjoicTZ1cnE2dXJxNnVycTZ1cnE2dXJxdyIsImlhdCI6MTgwMDAwMDAwMCwiZXhwIjoxODAwMDAwMDMwfQ.UIotSSkL2hLtGC00l7a8SyX9l3xePbSdZ2nm5j5nF_B29xKUouQ4rwYoE1tdGm59LFVICUvTEkC-ujPx-Sc9Aw";
+    let v = Verifier::new(KeyRing::parse(&format!("vec={PUB}")).expect("ring"));
+    let actor = v
+        .verify(Some(TOKEN), &get(), 1_800_000_000)
+        .expect("Bun's token must verify");
+    let (u, o) = ids();
+    assert_eq!((actor.user_id, actor.organization_id), (u, o));
+    assert_eq!(actor.session_class, "staff");
+    assert_eq!(actor.request_id, "r-1");
+}
