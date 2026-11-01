@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1.7
 # ChartWarden Rust API image (CW-RUST-M02 P1). Build context: rust/.
 #
-# Base images MUST be pinned by digest. The defaults below are placeholders until the image workflow's
-# `resolve-digests` mode prints the real digests (this repo's build sandbox cannot reach any registry);
-# the workflow's `build-push` mode refuses to build while any FROM is unpinned.
+# Base images MUST be pinned by digest. These digests came from the image workflow's `resolve-digests` mode
+# (run 41271091807, 2026-11-01, on main@5616e78). To refresh: run that mode again and replace both lines.
+# The workflow's `build-push` mode refuses to build while any base is unpinned.
 # Builder and runtime are both Debian 13, so the binary's glibc matches the runtime.
-ARG RUST_IMAGE=rust:1.97.0-slim-trixie@sha256:UNPINNED
-ARG RUNTIME_IMAGE=gcr.io/distroless/cc-debian13:nonroot@sha256:UNPINNED
+ARG RUST_IMAGE=rust:1.97.0-slim-trixie@sha256:686a437ead83701e8f871e66e838c3ec55f46b5fc235b025756396ac823bdc51
+ARG RUNTIME_IMAGE=gcr.io/distroless/cc-debian13:nonroot@sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1
 
 FROM ${RUST_IMAGE} AS build
 # Use the image's toolchain as-is (no rustup download) and prove it is the pinned version.
