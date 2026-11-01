@@ -90,6 +90,13 @@ async function main() {
     await admin.close();
     throw Error(`refusing database ${db.name}: not designated disposable. Run: COMMENT ON DATABASE ${db.name} IS '${EPHEMERAL_MARKER}';`);
   }
+  // Roles are cluster-wide (ALTER ROLE below, and upstream's migrations), so the cluster must be dedicated too.
+  const others = await admin`SELECT datname FROM pg_database
+                             WHERE datname NOT IN (current_database(), 'postgres', 'template0', 'template1') ORDER BY 1`;
+  if (others.length) {
+    await admin.close();
+    throw Error(`refusing: this PostgreSQL cluster also holds ${others.map((r: { datname: string }) => r.datname).join(", ")}. Parity changes cluster-wide roles, so it needs a dedicated, disposable cluster`);
+  }
   const fixtures = readFileSync(join(root, "rust/crates/cw-server/tests/fixtures/m02.sql"), "utf8");
   await admin.begin(async (tx) => {
     await tx.unsafe(fixtures);

@@ -101,10 +101,29 @@ Each of these deliberate breakages was applied, the relevant suite run, and the 
 | 7 | Supply-chain guard could fail open if `cargo tree` errors | Real | `cargo tree` output is captured, a non-zero exit fails the gate, and anything other than a clean "nothing to print" fails it too |
 | 8 | Evidence claimed owner acceptance | Real | Status line corrected above |
 
+## Review round 2 (ChatGPT, static review; it could not reach GitHub or run Rust)
+
+Verdict ACCEPT WITH FIXES; replay-cache downgrade accepted; no authorization bypass found.
+
+| Finding | Change |
+| --- | --- |
+| `ALTER ROLE chartwarden_app …` is cluster-wide, so a marked database inside a shared cluster is not enough | Both harnesses now also refuse a cluster that holds any database other than the marked one and the built-in `postgres`/`template0`/`template1`. Verified: with an extra database present both refuse; on the dedicated cluster all 66 tests pass and parity is 19/0 |
+| Single replica specified but not enforced | Spec P1 list: a deployment-policy test must fail on more than one replica, a second Rust service, or any non-socket listener |
+| Socket-path race by an uncooperative process in a shared directory | Spec P1 list: socket directory owned by the Rust user, group-accessible only to `api`, mode 0750 or stricter |
+| Spec still logged a plain SHA-256 of permission sets (reversible by enumeration) | Removed from the spec: production logs carry set sizes and diff counts only |
+| Independent execution | Still outstanding: no reviewer has run the code. See below |
+
+**Independent execution, still open.** Every result in this document was produced by Claude. ChatGPT reviewed the
+code statically and could not execute it. The repository is public, so GitHub Actions runs are free; a manual-only job
+running the unit tests, the live tests and parity against a fresh `pgvector/pgvector:pg18` container would give results
+neither author produced. It has not been added yet: it needs the owner's go-ahead, and it cannot be dry-run here
+because Docker Hub is unreachable.
+
 Found while fixing: the live tests' `user(n)` helper built ids by hex addition, which only matched the fixtures for
 users 1–9. It now formats the decimal id like the fixtures and the parity script do.
 
 ## How to reproduce
 
 See `rust/README.md` § Commands. The live tests and parity need `CW_TEST_ADMIN_DATABASE_URL` / `--admin-url` pointing
-at a migrated, ephemeral, loopback database. Both refuse other hosts.
+at a migrated database on a **dedicated, disposable, loopback** PostgreSQL cluster, marked with
+`COMMENT ON DATABASE <name> IS 'cw-ephemeral-test-db'`. Both refuse anything else. Destroy the cluster afterwards.

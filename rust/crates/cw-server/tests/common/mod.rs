@@ -47,7 +47,8 @@ pub async fn admin_pool() -> PgPool {
         .unwrap_or_else(|e| panic!("admin connect: {e}"))
 }
 
-/// The database must be explicitly designated disposable (review finding 2): loopback alone does not prove it.
+/// The database must be explicitly designated disposable, and its cluster dedicated to it (review rounds 1 and 2):
+/// loopback alone does not prove either.
 /// Designate one with `COMMENT ON DATABASE <name> IS 'cw-ephemeral-test-db';` and destroy it after use.
 pub const EPHEMERAL_MARKER: &str = "cw-ephemeral-test-db";
 
@@ -70,6 +71,20 @@ pub async fn assert_ephemeral(admin: &PgPool) {
         comment.as_deref(),
         Some(EPHEMERAL_MARKER),
         "refusing database {name:?}: not designated disposable. Run: COMMENT ON DATABASE {name} IS '{EPHEMERAL_MARKER}';"
+    );
+    // Roles are cluster-wide: `ALTER ROLE chartwarden_app LOGIN PASSWORD …` (and upstream's migrations) affect every
+    // database in the cluster. So the cluster itself must be dedicated: no database besides this one and the
+    // built-in postgres/template0/template1 (review round 2).
+    let others: Vec<String> = sqlx::query_scalar(
+        "SELECT datname::text FROM pg_database \
+          WHERE datname NOT IN (current_database(), 'postgres', 'template0', 'template1') ORDER BY 1",
+    )
+    .fetch_all(admin)
+    .await
+    .unwrap_or_else(|e| panic!("list databases: {e}"));
+    assert!(
+        others.is_empty(),
+        "refusing: this PostgreSQL cluster also holds {others:?}. Live tests change cluster-wide roles, so they need a dedicated, disposable cluster"
     );
 }
 

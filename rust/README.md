@@ -22,8 +22,10 @@ cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 cargo fmt --all --check
 scripts/supply-chain.sh                              # toolchain pin, build, fmt, clippy, cargo deny, cargo audit
 
-# Live tests: a migrated, EPHEMERAL, loopback PostgreSQL (e.g. the M00 catalog database).
-# They grant chartwarden_app LOGIN and rewrite fixture rows, and refuse non-loopback hosts.
+# Live tests: a migrated database on a DEDICATED, disposable, loopback PostgreSQL cluster, marked with
+#   COMMENT ON DATABASE <name> IS 'cw-ephemeral-test-db';
+# They change cluster-wide roles and rewrite fixture rows, so they refuse non-loopback hosts, unmarked databases,
+# and clusters holding any other database. Destroy the cluster afterwards.
 CW_TEST_ADMIN_DATABASE_URL=postgres://postgres@localhost:5433/chartwarden_catalog \
   cargo test --locked -p cw-server --features live
 
