@@ -1,0 +1,21 @@
+{
+  "generatedFrom": {
+    "repository": "Engrace-Hospice/chartwarden",
+    "commit": "9e0899a77cf78928d9965c35bc6bd3bafe8471d7",
+    "file": "packages/auth/src/roles/platform-reserved.ts",
+    "sha256": "fceebbdb5c49d3588df53608c1d1f784192b1bffe1000d692a4a10dbcf63804a"
+  },
+  "reservedPrefix": "platform_",
+  "reservedKeys": [
+    "ai_safety_owner"
+  ],
+  "reservedCategory": "platform_staff",
+  "platformOpsRoleKeys": [
+    "platform_admin",
+    "platform_billing_admin",
+    "platform_ops",
+    "platform_owner",
+    "platform_sales",
+    "platform_support_t2"
+  ]
+}

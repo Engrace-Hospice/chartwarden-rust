@@ -1,0 +1,23 @@
+[package]
+name = "cw-actor"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Verifies the signed actor assertion Bun attaches to requests it forwards to Rust (CW-RUST-M02)."
+
+[dependencies]
+base64.workspace = true
+ed25519-dalek.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+
+[features]
+# Signing helpers for tests in this and dependent crates. Never enabled in a release build.
+testing = []
+
+[lints]
+workspace = true

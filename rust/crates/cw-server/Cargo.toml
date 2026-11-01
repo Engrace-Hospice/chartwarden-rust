@@ -1,0 +1,40 @@
+[package]
+name = "cw-server"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "ChartWarden Rust API server (CW-RUST-M02 P0): GET /api/v1/me/permissions behind Bun's signed actor assertion."
+
+[[bin]]
+name = "cw-server"
+path = "src/main.rs"
+
+[features]
+# Live database tests (tests/live.rs). Requires CW_TEST_ADMIN_DATABASE_URL pointing at a migrated, ephemeral,
+# loopback PostgreSQL. Off by default so `cargo test` never touches a database by accident.
+live = []
+
+[dependencies]
+axum.workspace = true
+chrono.workspace = true
+cw-actor.workspace = true
+cw-authz.workspace = true
+cw-tenancy.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+cw-actor = { workspace = true, features = ["testing"] }
+ed25519-dalek.workspace = true
+http-body-util = "0.1"
+tower.workspace = true
+
+[lints]
+workspace = true

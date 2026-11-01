@@ -125,7 +125,7 @@ JWT library.
 | --- | --- |
 | `iss` / `aud` | `cw-bun` / `cw-rust` |
 | `sub` / `org` | user id / active organization id; both UUIDs, both required |
-| `sid`, `cls` | session id and session class; logged as ids, not used for decisions |
+| `sid`, `cls` | session id and session class; required non-empty, not logged, not used for decisions |
 | `mth`, `pth` | HTTP method and path; must equal the forwarded request |
 | `rid` | request id, which correlates Bun and Rust logs |
 | `jti` | single-use nonce |
@@ -173,9 +173,10 @@ rust/
 Permission keys are not PHI, but they are security-sensitive. Production logs carry:
 
 - request id, route, status and latency;
-- user, org and session ids;
+- user and org ids (not the session id; the request id correlates Bun and Rust);
 - outcome (`match`, `explained:stale-cache`, `unexplained`, `fallback:<reason>`);
-- the size of each set and a SHA-256 of each sorted set;
+- the size of each set (no fingerprint: a plain hash of a low-entropy permission set can be reversed by enumeration, so
+  production logs carry no hash of it; the comparison itself happens in Bun's memory);
 - for `unexplained` only, the **count** of keys only in Bun and only in Rust.
 
 Full key lists appear only in local and test runs. Assertions and cookies are never logged anywhere.
@@ -192,7 +193,12 @@ PostgreSQL (the M00 catalog setup), plus parity against a local Bun stack using 
 - the assertion signer and forwarder;
 - `RUST_ROUTES` (empty by default) and `RUST_ROUTE_MODE=shadow|serve`;
 - a `rust` compose service: digest-pinned, `mem_limit`/`cpus`, UDS volume shared only with `api`, health check;
-- a `controls.yaml` row for the new trust boundary.
+- a `controls.yaml` row for the new trust boundary;
+- exactly one Rust replica (no `scale`, no `deploy.replicas > 1`), because the `jti` replay cache is per process,
+  **enforced by a deployment-policy test** that fails on more than one replica, more than one Rust service, or any Rust
+  listener other than the shared socket (e.g. a published TCP port or `CW_RUST_TCP` in production);
+- the socket directory owned by the Rust container's user, group-accessible only to `api` (mode 0750 or stricter),
+  so no other process can create, replace or remove files in it.
 
 It must pass upstream's `arch:fitness`, `arch:compose-policy` and `arch:request-header-auth`, the compliance review,
 and an independent review of the authentication boundary. Upstream tests are not modified; new tests are added and
