@@ -1,6 +1,6 @@
 # CW-RUST-M02 P1 — plan: the upstream forwarding seam (off by default)
 
-Status: **draft for owner review** · Spec: `docs/CW-RUST-M02.md` v0.3 · Upstream pin: `Engrace-Hospice/chartwarden@9e0899a`
+Status: **in progress** (owner accepted D1–D5 as recommended, 2026-10-31) · Spec: `docs/CW-RUST-M02.md` v0.3 · Upstream pin: `Engrace-Hospice/chartwarden@9e0899a`
 (upstream `main` has not moved since the pin; re-check before starting).
 
 Same roles as P0: Claude builds, ChatGPT reviews adversarially, the owner approves and merges. P1 is the **first change
@@ -93,3 +93,14 @@ socket. It seeds the M02 fixtures and drives:
 
 Turning shadow or serve on in production (P2/P3), a second Rust route, Rust-side session validation (M04), and
 shared replay state (needed only before running more than one Rust instance).
+
+## Decisions taken while building (deviations from the draft, for review)
+
+| Draft said | Built | Why |
+| --- | --- | --- |
+| Sweep lists memberships cross-tenant through `withPlatformContext` | Lists active **orgs** through the existing audited enumerator, then each org's members under its own `withOrgContext` | No new cross-tenant read of `membership`; reuses an audited path |
+| `deploy.sh` rolls and verifies `CHARTWARDEN_RUST_IMAGE` in P1 | The `rust` compose service sits behind the `rust` **profile**; `deploy.sh` is unchanged and never starts it | `deploy.sh` verifies every image with cosign against upstream's own workflow identity. Signing the Rust image (built in this repo) and teaching `deploy.sh` a second identity touches the production deploy path, so it becomes a **P2 prerequisite**, not something merged while the feature is off |
+| Register `x-cw-actor-assertion` as `verified` | Registered as `not-authorization` in upstream's gate | Bun never believes the incoming header: it deletes it on every request. Verification happens in Rust |
+| Socket directory from the image | A **tmpfs** named volume with `uid=65532,gid=1000,mode=0750` | Correct ownership whichever container mounts it first; the socket never persists |
+| Sweep at 03:17 Pacific | `RUST_PARITY_SWEEP_UTC`, default `10:17` UTC | No time-zone library needed; 10:17 UTC is 03:17 PDT and 02:17 PST |
+
