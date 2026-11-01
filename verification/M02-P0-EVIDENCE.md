@@ -1,8 +1,32 @@
 # CW-RUST-M02 P0 — evidence
 
-**Status: submitted for independent review; owner acceptance pending.** Built by Claude. First review by ChatGPT
-(static, did not execute the code) returned ACCEPT WITH FIXES; the fixes are listed under "Review round 1". Spec:
-`docs/CW-RUST-M02.md` v0.2. Upstream pin: `Engrace-Hospice/chartwarden@9e0899a`. Recorded 2026-10-31.
+**Status: ACCEPTED by the owner on 2026-10-31** (PR #5 merged as `5866f9e`; parity path fix PR #7 as `846fff3`).
+Built by Claude. Reviewed twice by ChatGPT (static; verdict ACCEPT WITH FIXES both times, all fixes applied; tables
+below). **Independently executed** on a GitHub-hosted runner, with results produced by neither author (see
+"Independent execution"). Spec: `docs/CW-RUST-M02.md` (v0.2 at acceptance, now v0.3). Upstream pin:
+`Engrace-Hospice/chartwarden@9e0899a`.
+
+## Independent execution
+
+Workflow `.github/workflows/m02-rust.yml` (manual only), on a fresh `ubuntu-24.04` runner with upstream's
+digest-pinned `pgvector/pgvector:pg18` image as a dedicated cluster:
+
+| Run | Commit | Result |
+| --- | --- | --- |
+| [41261759270](https://github.com/Engrace-Hospice/chartwarden-rust/actions/runs/41261759270) | `5866f9e` (main) | **failed at parity only**: `--source upstream` was relative, so the dynamic imports resolved as package names. Every earlier step passed. Fixed by the owner in PR #7 (`resolve(sourceArg)`) |
+| [41262292598](https://github.com/Engrace-Hospice/chartwarden-rust/actions/runs/41262292598) | `6c7770d` (PR #7 branch) | **passed every step** |
+| [41263074320](https://github.com/Engrace-Hospice/chartwarden-rust/actions/runs/41263074320) | `846fff3` (main) | attempt 1 failed before any project step: Docker Hub timed out pulling the image (pull now retried). **Attempt 2 passed every step** on `main`: 66 tests, parity 19/0, supply chain ok |
+
+Results of run 41262292598, from its log:
+
+- rustc 1.97.0, matching the pin;
+- upstream's migrator plus the M00 catalog check: 571 tenant tables, 645 with RLS forced;
+- `reserved_platform_roles.json` matches upstream;
+- `supply-chain.sh` ok (fmt, clippy `-D warnings`, cargo deny, cargo audit);
+- tests: 28 + 16 + 10 unit, 10 live, 1 + 1 logging = **66 passed, 0 failed**;
+- parity: **19 actors, 0 diffs**, identical to the local run line for line.
+
+Not reproduced independently: the 15 mutations and the Unix-socket behaviour (both by hand, by Claude).
 
 ## Gate 0
 
@@ -111,13 +135,10 @@ Verdict ACCEPT WITH FIXES; replay-cache downgrade accepted; no authorization byp
 | Single replica specified but not enforced | Spec P1 list: a deployment-policy test must fail on more than one replica, a second Rust service, or any non-socket listener |
 | Socket-path race by an uncooperative process in a shared directory | Spec P1 list: socket directory owned by the Rust user, group-accessible only to `api`, mode 0750 or stricter |
 | Spec still logged a plain SHA-256 of permission sets (reversible by enumeration) | Removed from the spec: production logs carry set sizes and diff counts only |
-| Independent execution | Still outstanding: no reviewer has run the code. See below |
+| Independent execution | Done: GitHub-hosted run 41262292598 (top of this document) |
 
-**Independent execution, still open.** Every result in this document was produced by Claude. ChatGPT reviewed the
-code statically and could not execute it. The repository is public, so GitHub Actions runs are free; a manual-only job
-running the unit tests, the live tests and parity against a fresh `pgvector/pgvector:pg18` container would give results
-neither author produced. It has not been added yet: it needs the owner's go-ahead, and it cannot be dry-run here
-because Docker Hub is unreachable.
+**Independent execution: done after round 2.** See "Independent execution" at the top: the GitHub-hosted run
+reproduced the tests, live RLS tests, parity and supply-chain gate.
 
 Found while fixing: the live tests' `user(n)` helper built ids by hex addition, which only matched the fixtures for
 users 1–9. It now formats the decimal id like the fixtures and the parity script do.

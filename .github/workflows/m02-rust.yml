@@ -53,6 +53,8 @@ jobs:
 
       - name: Start a dedicated throwaway PostgreSQL 18 + pgvector
         run: |
+          # Docker Hub occasionally times out from hosted runners (seen on run 41263074320); retry the pull.
+          for i in 1 2 3 4 5; do docker pull "$PG_IMAGE" && break; [ "$i" = 5 ] && exit 1; sleep $((i * 10)); done
           docker run -d --name m02-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=chartwarden_catalog \
             -p 5432:5432 "$PG_IMAGE" -c max_locks_per_transaction=4096
           for i in $(seq 1 60); do docker exec m02-pg pg_isready -h 127.0.0.1 -U postgres -d chartwarden_catalog && exit 0; sleep 1; done
