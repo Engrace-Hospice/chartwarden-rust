@@ -72,8 +72,10 @@ function bodyIsValid(v: unknown): v is { permissions: string[] } {
 }
 
 async function main() {
-  const source = flag("--source"), adminUrl = flag("--admin-url"), rustBin = flag("--rust-bin");
-  if (!source || !adminUrl || !rustBin) throw Error("Usage: verify:m02-parity --source <upstream> --admin-url <loopback url> --rust-bin <cw-server>");
+  const sourceArg = flag("--source"), adminUrl = flag("--admin-url"), rustBin = flag("--rust-bin");
+  if (!sourceArg || !adminUrl || !rustBin) throw Error("Usage: verify:m02-parity --source <upstream> --admin-url <loopback url> --rust-bin <cw-server>");
+  // Absolute, so the dynamic imports below are file paths, not bare package names (CI passes a relative `upstream`).
+  const source = resolve(sourceArg);
   const url = new URL(adminUrl);
   if (!LOOPBACK.has(url.hostname)) throw Error(`refusing non-loopback database ${url.hostname}`);
   const appUrl = new URL(adminUrl);
