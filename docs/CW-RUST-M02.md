@@ -280,5 +280,5 @@ multiple Rust instances, and runtime-reloadable routing.
 
 ## Roles
 
-ChatGPT implements P0, then the P1 upstream PR. Claude adversarially verifies each phase: re-running the ATs, attacking
+Claude implements P0, then the P1 upstream PR. ChatGPT adversarially verifies each phase: re-running the ATs, attacking
 the assertion and RLS boundaries, and checking parity evidence. The owner approves each phase and every merge.
