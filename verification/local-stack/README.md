@@ -1,7 +1,10 @@
 # M02 local stack (P2 prerequisite 5)
 
 Runs AT-M02-05b, 09, 10, 11 and the uid-1000 socket test on a throwaway Bun + Rust stack on your machine, then
-removes it. You need Docker Desktop running and a few GB of free disk; nothing else.
+removes it. You need Docker Desktop running and a few GB of free disk, and read access to the (private) upstream
+repo: be logged in with `gh auth login`, or set `GH_TOKEN`. The token is handed only to the step that fetches upstream
+(through git's environment config, never written to disk); the install and test steps run without it. The script
+checks access up front, so a missing credential fails in seconds rather than after the Rust build.
 
 ```sh
 verification/local-stack/run.sh          # or: bun run verify:m02-local-stack
