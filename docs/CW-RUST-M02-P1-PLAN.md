@@ -104,3 +104,19 @@ shared replay state (needed only before running more than one Rust instance).
 | Socket directory from the image | A **tmpfs** named volume with `uid=65532,gid=1000,mode=0750` | Correct ownership whichever container mounts it first; the socket never persists |
 | Sweep at 03:17 Pacific | `RUST_PARITY_SWEEP_UTC`, default `10:17` UTC | No time-zone library needed; 10:17 UTC is 03:17 PDT and 02:17 PST |
 
+| Signing key "into `.env.production` for api" | Key read only from `CW_ACTOR_SIGNING_KEY_FILE` (a compose secret on `api`); `assertProductionEnv` refuses the inline variable | `.env.production` is injected into seven containers (independent review H2) |
+| `rust` on the default network | `rust` only on an internal `rust-db` network shared with postgres; image default digest-pinned to an unpullable placeholder; both enforced by `arch:compose-policy` | Compliance review: no peers, no egress, never an unverified image |
+
+## P2 prerequisites (gathered from the P1 reviews)
+
+All of these must be done before shadow mode is switched on in production:
+
+1. Cosign-sign the Rust image in this repo's image workflow, and teach `deploy.sh` to verify it against this repo's
+   workflow identity and roll `CHARTWARDEN_RUST_IMAGE` by digest.
+2. Provision the signing key as a compose secret mounted on `api` only, with `CW_ACTOR_SIGNING_KEY_FILE` pointing to it.
+   Never put it in `.env.production`.
+3. Set `RUST_*` on `api`'s `environment:` only, never in `.env.production`.
+4. Recreate `postgres` once so it joins the internal `rust-db` network. This is a short planned database restart.
+5. Pass AT-M02-05b, 09, 10 and 11 on a real Bun + Rust stack. Include a connection test as uid 1000 to confirm the
+   socket file mode.
+6. Owner go-ahead.
