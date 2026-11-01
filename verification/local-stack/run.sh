@@ -64,6 +64,8 @@ say "Workspace: copy this repo, fetch upstream at $UPSTREAM_REF (must be on upst
 tools bash -ec '
   rm -rf /work/rust /work/state && mkdir -p /work/rust
   cd /src && tar --exclude=./node_modules --exclude=./rust/target --exclude=./verification/output -cf - . | tar -C /work/rust -xf -
+  # Host checkouts can be 0600 (umask 077); the uid-1001 socket-deny run must still be able to read the harness.
+  chmod -R a+rX /work/rust
   git clone -q --filter=blob:none --no-checkout https://github.com/Engrace-Hospice/chartwarden.git /work/upstream
   cd /work/upstream
   git checkout -q --detach "$UPSTREAM_REF"
