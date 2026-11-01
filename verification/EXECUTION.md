@@ -56,7 +56,8 @@ upstream test names contain newlines). `retirements.json` lists approved removal
 
 `regulatory-correction` requires `authority` and a `clinical:`, `billing:` or `compliance:` approver
 (ADR-0060 invariant 1). `--update` refuses while any removal is unexplained. The stored inventory is a
-**candidate** (35,194 IDs at `9e0899a`) until the owner approves the M00 baseline.
+**approved** M00 baseline (35,194 IDs at `9e0899a`, owner sign-off 2026-10-31; see `baselines/M00-APPROVAL.md`).
+Re-running `--update` resets it to `candidate` until approved again.
 
 ## Catalog findings
 
@@ -100,4 +101,4 @@ independent evidence is wanted; everything it does also runs locally with the co
 - If `Engrace-Hospice/chartwarden` is made private, the checkout needs a read-only token for that repository.
 
 Not covered yet: Playwright execution (needs the full stack: backend, seeded data, object storage),
-P1 reproduction, approval of the candidate inventory.
+P1 reproduction.
