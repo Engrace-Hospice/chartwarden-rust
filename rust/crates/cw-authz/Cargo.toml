@@ -1,0 +1,18 @@
+[package]
+name = "cw-authz"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Effective-permission resolution, ported from @chartwarden/auth rbac (CW-RUST-M02)."
+
+[dependencies]
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

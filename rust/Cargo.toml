@@ -1,0 +1,39 @@
+[workspace]
+resolver = "3"
+members = ["crates/cw-actor", "crates/cw-authz", "crates/cw-tenancy", "crates/cw-server"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.97"
+license = "LicenseRef-Proprietary"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "warn"
+
+[workspace.dependencies]
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio", "matched-path"] }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+ed25519-dalek = { version = "2", default-features = false, features = ["std", "fast"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "derive"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "time", "sync"] }
+tower = { version = "0.5", default-features = false, features = ["util"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "env-filter", "std"] }
+uuid = { version = "1", features = ["serde"] }
+cw-actor = { path = "crates/cw-actor" }
+cw-authz = { path = "crates/cw-authz" }
+cw-tenancy = { path = "crates/cw-tenancy" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
