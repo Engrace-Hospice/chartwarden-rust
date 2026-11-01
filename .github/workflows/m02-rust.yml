@@ -1,0 +1,86 @@
+# CW-RUST-M02 P0 — independent execution of the Rust evidence.
+#
+# Manual only (Actions → "M02 Rust P0" → Run workflow, choose the branch). Free on this public repository.
+# Runs everything verification/M02-P0-EVIDENCE.md claims, on a fresh runner and a fresh database, so the results
+# are produced by neither author:
+#   unit tests · live RLS/read-only tests · parity against upstream's real resolver · reserved-role sync ·
+#   supply-chain gate (toolchain pin, fmt, clippy, cargo deny, cargo audit).
+#
+# Trust and isolation (same rules as the M00 workflow):
+#   - read-only token, no secrets referenced, persist-credentials false;
+#   - upstream code runs only at the SHA pinned in verification/config.json, after proving it is on upstream main;
+#   - the database is a throwaway container on localhost, a dedicated cluster, marked disposable.
+name: M02 Rust P0
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m02-rust-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: 1.4.4
+  CARGO_TERM_COLOR: always
+  # Same image and digest upstream pins in deploy/production/compose.yml.
+  PG_IMAGE: pgvector/pgvector:pg18@sha256:2358fcba361ed2233a5ed81b5fe4ca779ccb304120ce531a3bf51c0ed7e2bc11
+  ADMIN_URL: postgres://postgres:postgres@localhost:5432/chartwarden_catalog
+
+jobs:
+  rust:
+    name: Rust P0 — tests, live RLS, parity, supply chain
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { persist-credentials: false }
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with: { bun-version: "${{ env.BUN_VERSION }}" }
+      - run: bun install --frozen-lockfile
+      - uses: ./.github/actions/pinned-upstream
+
+      - name: Rust toolchain from rust/rust-toolchain.toml
+        working-directory: rust
+        run: |
+          rustup toolchain install
+          rustc --version
+          cargo --version
+      - name: Supply-chain tools (pinned versions)
+        run: cargo install --locked cargo-deny@0.20.2 cargo-audit@0.22.2
+
+      - name: Start a dedicated throwaway PostgreSQL 18 + pgvector
+        run: |
+          docker run -d --name m02-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=chartwarden_catalog \
+            -p 5432:5432 "$PG_IMAGE" -c max_locks_per_transaction=4096
+          for i in $(seq 1 60); do docker exec m02-pg pg_isready -h 127.0.0.1 -U postgres -d chartwarden_catalog && exit 0; sleep 1; done
+          docker logs m02-pg; exit 1
+      - name: Migrate with upstream's migrator and check the catalog (M00)
+        run: bun run verify:catalog --source upstream --database-url "$ADMIN_URL" --migrate
+      - name: Mark the database disposable
+        run: docker exec m02-pg psql -U postgres -d chartwarden_catalog -c "COMMENT ON DATABASE chartwarden_catalog IS 'cw-ephemeral-test-db'"
+
+      - name: Reserved-role data matches upstream
+        run: bun run verify:m02-reserved --source upstream
+      - name: Supply-chain gate
+        working-directory: rust
+        run: scripts/supply-chain.sh
+      - name: Unit and live tests (as chartwarden_app)
+        working-directory: rust
+        env: { CW_TEST_ADMIN_DATABASE_URL: "${{ env.ADMIN_URL }}" }
+        run: cargo test --locked --workspace --all-features -- --nocapture
+      - name: Parity with upstream's resolver
+        run: |
+          cargo build --locked --manifest-path rust/Cargo.toml -p cw-server
+          bun run verify:m02-parity --source upstream --admin-url "$ADMIN_URL" --rust-bin rust/target/debug/cw-server
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: m02-p0-evidence
+          path: |
+            verification/output/m02/parity.json
+            verification/output/*/database-catalog.json
+          if-no-files-found: warn
