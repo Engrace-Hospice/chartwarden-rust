@@ -1,6 +1,12 @@
 # CW-RUST-M02 — First Rust endpoint (shadow, then serve)
 
-Version: **0.2** · Status: **proposed** · Upstream pin: `Engrace-Hospice/chartwarden@9e0899a` · Depends on: M00, ADR-0060
+Version: **0.3** · Status: **approved** (P0 accepted 2026-10-31) · Upstream pin: `Engrace-Hospice/chartwarden@9e0899a` · Depends on: M00, ADR-0060
+
+Changes from 0.2 (owner decision, 2026-10-31): P2's exit criterion no longer depends on request volume. Only the
+Roles & Permissions admin screen calls this endpoint, so "≥ 10,000 requests in 7 days" might never be met. P2 is now
+judged by a **daily parity sweep over every active membership** plus every organic shadow request, both with zero
+unexplained differences. P1 gains the sweep code (off by default), a Rust-side restriction on sweep assertions, a
+socket health check, and AT-M02-11. P0 review findings are folded in (logging, one replica, socket directory).
 
 Changes from 0.1 (review of PR #3): an M00 gate, a transport threat model and replay control, database-level
 fail-closed RLS tests, Bun-owned HTTP behaviour, a deterministic stale-cache rule, bounded shadow traffic, wider
@@ -198,7 +204,11 @@ PostgreSQL (the M00 catalog setup), plus parity against a local Bun stack using 
   **enforced by a deployment-policy test** that fails on more than one replica, more than one Rust service, or any Rust
   listener other than the shared socket (e.g. a published TCP port or `CW_RUST_TCP` in production);
 - the socket directory owned by the Rust container's user, group-accessible only to `api` (mode 0750 or stricter),
-  so no other process can create, replace or remove files in it.
+  so no other process can create, replace or remove files in it;
+- the **daily parity sweep** (below), present but off by default (`RUST_PARITY_SWEEP=off`);
+- in this repo: `cw-server --healthcheck` (probes `/health` over the socket, for the compose health check), and
+  sweep assertions (`cls = "parity-sweep"`) accepted **only** for `GET /api/v1/me/permissions`, so a sweep
+  assertion can never reach any later Rust route.
 
 It must pass upstream's `arch:fitness`, `arch:compose-policy` and `arch:request-header-auth`, the compliance review,
 and an independent review of the authentication boundary. Upstream tests are not modified; new tests are added and
@@ -211,12 +221,34 @@ enter the stored inventory as additions.
 - an optional sample rate (default 100 %);
 - shadow work starts after the response is sent and cannot delay or fail it.
 
-Exit criterion: ≥ 7 days and ≥ 10,000 compared requests, with:
+**Daily parity sweep.** Organic traffic on this endpoint is thin, so P2 does not wait for volume. Once a day, at a
+low-traffic hour, a job in the `api` process (the only holder of the signing key and the socket) compares Bun and Rust
+for **every active membership**:
 
-- 0 `unexplained`;
-- `explained:stale-cache` under 0.5 % of compared requests;
-- Rust error or timeout rate under 0.1 %;
-- dropped shadows under 1 %.
+1. List `(organization_id, user_id)` for all `active` memberships through upstream's gated `withPlatformContext`
+   (a newly registered platform job, cross-tenant, audited). This list is the only cross-tenant read.
+2. For each pair, in order and at most 2 in flight: Bun resolves through a **fresh, uncached** resolver under
+   `withOrgContext`; Rust is called over the socket with an assertion whose `cls` is `parity-sweep`, `sid` is the run
+   id, and `mth`/`pth` are `GET /api/v1/me/permissions`.
+3. Compare as sets in memory. On a difference, resolve both sides once more. If they now agree, the outcome is
+   `explained:race` (a grant changed between the two reads); otherwise `unexplained`.
+4. Log per run: memberships listed, compared, `match`, `explained:race`, `unexplained`, errors, duration. For each
+   `unexplained`: org and user ids and the counts of keys only in Bun and only in Rust. Never a key.
+5. Stop early on 1 % errors; never retry in a loop; statement timeouts as in M02 transactions. It writes nothing
+   except the platform-context audit event.
+
+Minting assertions outside a request is a new capability, so it is fenced: the signing call for sweeps lives in the
+sweep module only, sweep assertions are bound to the one read-only path, Rust refuses `parity-sweep` on any other
+path, and the worst case is reading a user's permission list, which the sweep already reads directly.
+
+**Exit criterion** (no minimum request count):
+
+- ≥ 7 consecutive days in shadow mode;
+- ≥ 7 daily sweeps, each comparing **100 %** of the memberships it listed (reconciled against an independent
+  `count(*)`), each with **0 `unexplained`**, sweep errors under 0.1 %, and `explained:race` investigated if it ever
+  exceeds 0.1 % of a run;
+- every organic shadow request: 0 `unexplained`; Rust error or timeout rate under 0.1 %; dropped shadows under 1 %;
+  `explained:stale-cache` reported, and investigated if it exceeds 0.5 % once at least 200 requests have been compared.
 
 **P3 — Serve.** For this route, Bun returns Rust's validated body.
 
@@ -254,15 +286,16 @@ There are two levers, and the spec does not claim more than they do:
 | AT-M02-05b | End to end through Bun (P1): status, headers and body seen by the client are identical with `RUST_ROUTES` empty, in shadow and in serve, modulo set order. The 401 paths (no session, expired, org unselected) are unchanged. |
 | AT-M02-06 | Retention: `verify:retention` passes against the approved inventory. No ID may disappear, including through a runner silently skipping collection. Upstream `authz-routes.test.ts` and `m3-role-templates.live.test.ts` pass unchanged after P1. |
 | AT-M02-07 | Supply chain: `cargo build --locked`; `cargo deny check` and `cargo audit` pass. **If the advisory database cannot be fetched, the check fails**; it is not skipped. Also `clippy -D warnings` and `fmt --check`. The pinned toolchain matches `rust-toolchain.toml`, and the image digest is recorded. |
-| AT-M02-08 | Logging: Rust and Bun log lines for test requests contain no assertion, cookie or permission key. An `unexplained` diff logs counts and hashes only. |
+| AT-M02-08 | Logging: Rust and Bun log lines for test requests contain no assertion, cookie or permission key. An `unexplained` diff logs ids and key counts only, never a key or a hash of the set. |
 | AT-M02-09 | Rollback and fallback: with Rust stopped, the route answers from Bun within Bun's normal latency plus connection-refused time, and `fallback:connect` increments. Each fallback reason in the list above is triggered once by a fault-injecting stub. |
 | AT-M02-10 | Shadow safety: with Rust stalled, 1,000 concurrent requests return Bun's answers with no added p99 latency beyond 5 ms; in-flight shadows never exceed 8; drops are counted. |
+| AT-M02-11 | Parity sweep (P1, local stack on the M02 fixtures): compares every active membership (count reconciled); a planted Rust defect yields `unexplained` with ids and counts only; a grant changed between reads yields `explained:race`; never more than 2 in flight; Rust refuses a `parity-sweep` assertion on any other path; off by default; no permission key in any log line. |
 
 ## Stop conditions
 
 Stop and return to the owner if any of these happens:
 
-- an unexplained parity diff;
+- an unexplained parity diff, in a sweep or in organic shadow traffic;
 - a cross-tenant row in any test;
 - a need to modify or skip an upstream test;
 - Rust needs a role other than `chartwarden_app`;
@@ -275,8 +308,8 @@ Stop and return to the owner if any of these happens:
 | Phase | May start | Accepted when |
 | --- | --- | --- |
 | P0 | After this spec is approved | Gate 0 met; AT-01–05, 07, 08 pass with live DB evidence; Claude's adversarial verification done |
-| P1 | After P0 is accepted | Upstream gates green; AT-04 (header), 05b, 06, 09, 10 pass; independent auth-boundary review |
-| P2 | After P1 is merged | Exit criteria above, from production logs |
+| P1 | After P0 is accepted | Upstream gates green; AT-04 (header), 05b, 06, 07 (image), 09, 10, 11 pass; independent auth-boundary review |
+| P2 | After P1 is merged | Exit criterion above (7 days, 7 complete sweeps, 0 unexplained), from production logs |
 | P3 | After P2 exit criteria | Owner go-ahead; rollback lever 1 demonstrated in production |
 
 ## Out of scope
