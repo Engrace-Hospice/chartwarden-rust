@@ -27,6 +27,8 @@ started=$(date +%s)
 
 say() { printf '\n\033[1m== %s\033[0m  (+%ss)\n' "$*" "$(( $(date +%s) - started ))"; }
 tools() { "${DC[@]}" run --rm -T tools "$@"; }
+# Upstream is private, so only its fetch gets a credential; the install and test steps run without one.
+tools_git() { "${DC[@]}" run --rm -T -e UPSTREAM_AUTH_HEADER tools "$@"; }
 phase() { # phase <name> [extra args]; a failed phase is recorded and the run goes on
   local name=$1; shift
   if ! tools bun run verification/src/m02-local-stack.ts "$name" --source /work/upstream --out /out --state /work/state "$@"; then
@@ -48,6 +50,14 @@ docker info >/dev/null 2>&1 || { echo "Docker is not running. Start Docker Deskt
 docker compose version >/dev/null
 echo "upstream ref: $UPSTREAM_REF"
 echo "evidence:     $OUT"
+# Fail now, not after the Rust build: upstream is private and the containers carry no GitHub credentials.
+UPSTREAM_REPO=https://github.com/Engrace-Hospice/chartwarden.git
+upstream_token=${GH_TOKEN:-${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}}
+[ -n "$upstream_token" ] || { echo "No GitHub token for the private upstream repo. Run 'gh auth login' or set GH_TOKEN (read access to Engrace-Hospice/chartwarden)."; exit 2; }
+UPSTREAM_AUTH_HEADER="Authorization: basic $(printf 'x-access-token:%s' "$upstream_token" | base64 | tr -d '\n')"
+unset upstream_token
+git -c http.extraheader="$UPSTREAM_AUTH_HEADER" ls-remote --exit-code "$UPSTREAM_REPO" HEAD >/dev/null 2>&1 \
+  || { echo "That token cannot read $UPSTREAM_REPO (needs read access)."; exit 2; }
 # A stale run of THIS project only (never anything else) is removed first.
 "${DC[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
 trap cleanup EXIT
@@ -60,18 +70,25 @@ say "Start PostgreSQL 18 + pgvector (throwaway)"
 "${DC[@]}" exec -T pg psql -q -U postgres -d chartwarden_m02local \
   -c "COMMENT ON DATABASE chartwarden_m02local IS 'cw-ephemeral-test-db'"
 
-say "Workspace: copy this repo, fetch upstream at $UPSTREAM_REF (must be on upstream main), install deps"
+say "Workspace: fetch upstream at $UPSTREAM_REF (must be on upstream main)"
+# The credential is passed through git's environment config (never written to .git/config) and only to this step.
+UPSTREAM_AUTH_HEADER="$UPSTREAM_AUTH_HEADER" tools_git bash -ec '
+  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader GIT_CONFIG_VALUE_0="$UPSTREAM_AUTH_HEADER"
+  unset UPSTREAM_AUTH_HEADER
+  git clone -q --filter=blob:none --no-checkout '"$UPSTREAM_REPO"' /work/upstream
+  cd /work/upstream
+  git checkout -q --detach "$UPSTREAM_REF"
+  git merge-base --is-ancestor HEAD origin/main || { echo "refusing: $UPSTREAM_REF is not on upstream main"; exit 1; }
+  echo "upstream at $(git rev-parse HEAD)"
+'
+
+say "Workspace: copy this repo, install deps (no credentials)"
 tools bash -ec '
   rm -rf /work/rust /work/state && mkdir -p /work/rust
   cd /src && tar --exclude=./node_modules --exclude=./rust/target --exclude=./verification/output -cf - . | tar -C /work/rust -xf -
   # Host checkouts can be 0600 (umask 077); the uid-1001 socket-deny run must still be able to read the harness.
   chmod -R a+rX /work/rust
-  git clone -q --filter=blob:none --no-checkout https://github.com/Engrace-Hospice/chartwarden.git /work/upstream
-  cd /work/upstream
-  git checkout -q --detach "$UPSTREAM_REF"
-  git merge-base --is-ancestor HEAD origin/main || { echo "refusing: $UPSTREAM_REF is not on upstream main"; exit 1; }
-  echo "upstream at $(git rev-parse HEAD)"
-  bun install --frozen-lockfile --ignore-scripts >/dev/null
+  cd /work/upstream && bun install --frozen-lockfile --ignore-scripts >/dev/null
   cd /work/rust && bun install --frozen-lockfile >/dev/null
 '
 
