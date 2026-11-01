@@ -57,5 +57,22 @@ The toolchain is pinned in `rust-toolchain.toml` (1.97.0). Where rustup cannot d
 | `CW_DB_MAX_CONNECTIONS` | Pool size (default 5) |
 | `APP_VERSION`, `GIT_SHA`, `BUILD_TIME` | Reported by `/version` |
 
-There is no container image yet. It belongs to P1 with the compose service, where it can be built and its digest
-recorded.
+`cw-server --healthcheck` probes `/health` over `CW_RUST_SOCKET` and exits 0 or 1. It is the compose health check,
+so the image needs no shell or curl.
+
+## Container image (P1)
+
+`rust/Dockerfile`:
+
+- multi-stage, with Debian 13 for both builder and runtime;
+- distroless runtime: no shell, no package manager;
+- user `65532:1000`, where 1000 is the `bun` user of upstream's `api` image;
+- socket directory `/run/cw-rust` with mode 0750, owned `65532:1000`, so only `api` can reach the socket.
+
+It is built and published by `.github/workflows/rust-image.yml` (manual only):
+
+1. `resolve-digests` prints the base-image digests to pin in the Dockerfile. This sandbox cannot reach any registry,
+   so the placeholders stay until that run.
+2. `build-push` refuses unpinned bases, builds, smoke-tests the binary inside the image, pushes
+   `ghcr.io/engrace-hospice/chartwarden-rust:sha-<commit>`, and prints the digest for upstream's
+   `CHARTWARDEN_RUST_IMAGE`.

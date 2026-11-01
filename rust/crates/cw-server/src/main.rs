@@ -9,6 +9,8 @@
 //! | `CW_DB_MAX_CONNECTIONS` | Pool size (default 5) |
 //! | `APP_VERSION`, `GIT_SHA`, `BUILD_TIME` | Reported by `/version` |
 //! | `RUST_LOG` | Log filter (default `info`) |
+//!
+//! `cw-server --healthcheck` probes `/health` over `CW_RUST_SOCKET` and exits 0 (healthy) or 1.
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -27,8 +29,30 @@ fn fail(msg: &str) -> ! {
     std::process::exit(2);
 }
 
+/// `cw-server --healthcheck`: GET /health over the Unix socket, exit 0 on a 200 and 1 otherwise. For the compose
+/// health check, so the runtime image needs no curl or shell. Reads only `CW_RUST_SOCKET`; touches no database.
+fn healthcheck() -> ! {
+    use std::io::{Read, Write};
+    use std::time::Duration;
+    let path = std::env::var("CW_RUST_SOCKET").unwrap_or_else(|_| DEFAULT_SOCKET.to_owned());
+    let ok = (|| -> std::io::Result<bool> {
+        let mut s = std::os::unix::net::UnixStream::connect(&path)?;
+        s.set_read_timeout(Some(Duration::from_secs(2)))?;
+        s.set_write_timeout(Some(Duration::from_secs(2)))?;
+        s.write_all(b"GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")?;
+        let mut buf = [0u8; 64];
+        let n = s.read(&mut buf)?;
+        Ok(buf[..n].starts_with(b"HTTP/1.1 200"))
+    })()
+    .unwrap_or(false);
+    std::process::exit(if ok { 0 } else { 1 });
+}
+
 #[tokio::main]
 async fn main() {
+    if std::env::args().nth(1).as_deref() == Some("--healthcheck") {
+        healthcheck();
+    }
     tracing_subscriber::fmt()
         .json()
         .flatten_event(true)

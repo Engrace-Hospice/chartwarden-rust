@@ -1,0 +1,77 @@
+# CW-RUST-M02 P1: build and publish the Rust API image (decision D1: built here, referenced upstream by digest).
+#
+# Manual only. Two modes:
+#   resolve-digests  print the current digests of the Dockerfile's base images, to pin them in rust/Dockerfile
+#   build-push       refuse unpinned bases, build, smoke-test, push ghcr.io/engrace-hospice/chartwarden-rust:sha-<commit>,
+#                    and print the pushed digest for upstream's CHARTWARDEN_RUST_IMAGE
+name: Rust image
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: What to do
+        type: choice
+        options: [resolve-digests, build-push]
+        default: resolve-digests
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/engrace-hospice/chartwarden-rust
+
+jobs:
+  resolve:
+    if: inputs.mode == 'resolve-digests'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { persist-credentials: false }
+      - name: Resolve base image digests
+        run: |
+          for arg in RUST_IMAGE RUNTIME_IMAGE; do
+            ref=$(sed -n "s/^ARG ${arg}=\([^@]*\).*/\1/p" rust/Dockerfile)
+            digest=$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest.Digest}}' | tr -d '"')
+            echo "${arg}=${ref}@${digest}" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+
+  build-push:
+    if: inputs.mode == 'build-push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with: { persist-credentials: false }
+      - name: Refuse unpinned base images
+        run: |
+          bad=$(grep -E '^ARG (RUST|RUNTIME)_IMAGE=' rust/Dockerfile | grep -vE '@sha256:[0-9a-f]{64}$' || true)
+          if [ -n "$bad" ]; then echo "::error::unpinned base image(s): $bad"; exit 1; fi
+      - name: Build
+        run: docker build --pull -t "$IMAGE:sha-$GITHUB_SHA" rust
+      - name: Smoke test (no shell in the image; exercise the binary's refusals)
+        run: |
+          set +e
+          docker run --rm "$IMAGE:sha-$GITHUB_SHA" --healthcheck; hc=$?
+          docker run --rm -e CW_ACTOR_PUBLIC_KEYS=garbage "$IMAGE:sha-$GITHUB_SHA"; cfg=$?
+          uid=$(docker image inspect "$IMAGE:sha-$GITHUB_SHA" --format '{{.Config.User}}')
+          set -e
+          echo "healthcheck without server -> $hc (want 1); bad key config -> $cfg (want 2); user=$uid (want 65532:1000)"
+          [ "$hc" = 1 ] && [ "$cfg" = 2 ] && [ "$uid" = "65532:1000" ]
+      - name: Push and record the digest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "$IMAGE:sha-$GITHUB_SHA"
+          ref=$(docker image inspect "$IMAGE:sha-$GITHUB_SHA" --format '{{index .RepoDigests 0}}')
+          echo "CHARTWARDEN_RUST_IMAGE=$ref" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker logout ghcr.io

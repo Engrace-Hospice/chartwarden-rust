@@ -31,6 +31,12 @@ pub const MAX_ASSERTION_LEN: usize = 4096;
 pub const DEFAULT_REPLAY_CAPACITY: usize = 100_000;
 
 pub const EXPECTED_ISSUER: &str = "cw-bun";
+
+/// Session class Bun puts on assertions minted by the daily parity sweep (spec v0.3 §"Daily parity sweep").
+pub const SWEEP_CLASS: &str = "parity-sweep";
+/// The only requests a sweep assertion may authenticate. Minting assertions outside a user request is a new
+/// capability; this fence keeps it on one read-only route even when Rust gains more routes.
+pub const SWEEP_ALLOWED: &[(&str, &str)] = &[("GET", "/api/v1/me/permissions")];
 pub const EXPECTED_AUDIENCE: &str = "cw-rust";
 
 /// Why an assertion was refused. `as_str()` is the only form that is logged.
@@ -72,6 +78,8 @@ pub enum Rejection {
     Replayed,
     #[error("replay cache full")]
     ReplayCacheFull,
+    #[error("sweep assertion outside its route")]
+    SweepNotAllowed,
 }
 
 impl Rejection {
@@ -95,6 +103,7 @@ impl Rejection {
             Self::BadLifetime => "bad_lifetime",
             Self::Replayed => "replayed",
             Self::ReplayCacheFull => "replay_cache_full",
+            Self::SweepNotAllowed => "sweep_not_allowed",
         }
     }
 }
@@ -329,6 +338,13 @@ impl Verifier {
         }
         let user_id = canonical_uuid(&claims.sub).ok_or(Rejection::BadIdentity)?;
         let organization_id = canonical_uuid(&claims.org).ok_or(Rejection::BadIdentity)?;
+        if claims.cls == SWEEP_CLASS
+            && !SWEEP_ALLOWED
+                .iter()
+                .any(|(m, p)| *m == binding.method && *p == binding.path)
+        {
+            return Err(Rejection::SweepNotAllowed);
+        }
         if claims.sid.is_empty() || claims.cls.is_empty() || claims.rid.is_empty() {
             return Err(Rejection::BadIdentity);
         }

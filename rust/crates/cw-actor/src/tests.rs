@@ -512,3 +512,64 @@ fn capacity_boundary_is_exact_and_replays_are_still_caught_when_full() {
         .is_ok()
     );
 }
+
+// ---- Sweep fence (spec v0.3, AT-M02-11 Rust side) ----
+
+#[test]
+fn a_sweep_assertion_is_accepted_on_the_permissions_route() {
+    let c = with(good_claims(), "cls", json!(SWEEP_CLASS));
+    assert!(check(&sign(&c, KID, &key(1))).is_ok());
+}
+
+#[test]
+fn a_sweep_assertion_is_refused_on_any_other_route_even_when_correctly_bound() {
+    let v = verifier();
+    for (m, p) in [
+        ("GET", "/api/v1/me/session"),
+        ("POST", PATH),
+        ("GET", "/api/v1/patients"),
+    ] {
+        let c = with(
+            with(
+                with(good_claims(), "cls", json!(SWEEP_CLASS)),
+                "mth",
+                json!(m),
+            ),
+            "pth",
+            json!(p),
+        );
+        assert_eq!(
+            v.verify(
+                Some(&sign(&c, KID, &key(1))),
+                &Binding { method: m, path: p },
+                NOW
+            ),
+            Err(Rejection::SweepNotAllowed),
+            "{m} {p}"
+        );
+    }
+}
+
+#[test]
+fn a_refused_sweep_assertion_does_not_consume_a_replay_slot() {
+    let v = verifier();
+    let c = with(
+        with(good_claims(), "cls", json!(SWEEP_CLASS)),
+        "pth",
+        json!("/api/v1/other"),
+    );
+    let t = sign(&c, KID, &key(1));
+    let other = Binding {
+        method: "GET",
+        path: "/api/v1/other",
+    };
+    assert_eq!(
+        v.verify(Some(&t), &other, NOW),
+        Err(Rejection::SweepNotAllowed)
+    );
+    assert_eq!(
+        v.verify(Some(&t), &other, NOW),
+        Err(Rejection::SweepNotAllowed),
+        "not Replayed"
+    );
+}
