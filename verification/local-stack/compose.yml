@@ -1,0 +1,91 @@
+# CW-RUST-M02 P2 prerequisite 5 — a THROWAWAY Bun + Rust stack for AT-M02-05b/09/10/11 and the uid-1000 socket test.
+# Driven by run.sh (never `docker compose up` by hand). Project name `cw-m02-local`: its own containers, volumes and
+# networks; no published ports, so it cannot collide with any other stack on this machine, including a shared
+# Postgres on 5432. Everything is removed at the end (`down -v`).
+#
+# Mirrors deploy/production/compose.yml where it matters:
+#   - rust: user 65532:1000, read-only root, only the internal `rust-db` network, socket in a tmpfs volume
+#           (uid=65532, gid=1000, mode=0750), DATABASE_URL as chartwarden_app, same limits.
+#   - tools stands in for `api`: uid 1000 (gid 1000), on `default` + the socket volume, never on `rust-db`.
+#   - pg is on both networks, like production postgres after its planned recreate.
+name: cw-m02-local
+
+services:
+  pg:
+    # Same image and digest upstream pins in deploy/production/compose.yml.
+    image: pgvector/pgvector:pg18@sha256:2358fcba361ed2233a5ed81b5fe4ca779ccb304120ce531a3bf51c0ed7e2bc11
+    command: ["postgres", "-c", "max_locks_per_transaction=4096"]
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chartwarden_m02local
+    networks: [default, rust-db]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "chartwarden_m02local"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+
+  rust:
+    build:
+      context: ../../rust
+      dockerfile: Dockerfile
+    image: cw-m02-local/rust:dev
+    mem_limit: 256m
+    cpus: 0.5
+    read_only: true
+    user: "65532:1000"
+    networks: [rust-db]
+    environment:
+      DATABASE_URL: postgresql://chartwarden_app:chartwarden_app_live_test@pg:5432/chartwarden_m02local
+      CW_ACTOR_PUBLIC_KEYS: ${CW_ACTOR_PUBLIC_KEYS:-}
+      CW_RUST_SOCKET: /run/cw-rust/cw-rust.sock
+      RUST_LOG: info
+    volumes:
+      - type: volume
+        source: rust-sock
+        target: /run/cw-rust
+        volume: { nocopy: true }
+    depends_on:
+      pg:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/cw-server", "--healthcheck"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  tools:
+    build:
+      context: .
+      dockerfile: tools.Dockerfile
+    image: cw-m02-local/tools:dev
+    user: "1000:1000"
+    networks: [default]
+    working_dir: /work/rust
+    environment:
+      CW_M02_ADMIN_URL: postgres://postgres:postgres@pg:5432/chartwarden_m02local
+      UPSTREAM_REF: ${UPSTREAM_REF:-}
+      LOG_LEVEL: warn
+    volumes:
+      - work:/work
+      - ../..:/src:ro
+      - ${CW_M02_OUT:-../output/m02-local}:/out
+      - type: volume
+        source: rust-sock
+        target: /run/cw-rust
+        volume: { nocopy: true }
+
+networks:
+  default: {}
+  rust-db:
+    internal: true
+
+volumes:
+  work: {}
+  rust-sock:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: "uid=65532,gid=1000,mode=0750"

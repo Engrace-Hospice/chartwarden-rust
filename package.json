@@ -13,7 +13,8 @@
     "verify:typecheck": "tsc -p tsconfig.json",
     "verify:m02-reserved": "bun run verification/src/m02-reserved-roles.ts",
     "verify:m02-parity": "bun run verification/src/m02-parity.ts",
-    "verify:m02-bridge-runtime": "bun run verification/src/m02-bridge-runtime.ts"
+    "verify:m02-bridge-runtime": "bun run verification/src/m02-bridge-runtime.ts",
+    "verify:m02-local-stack": "bash verification/local-stack/run.sh"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",
