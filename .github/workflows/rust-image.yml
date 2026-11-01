@@ -83,7 +83,7 @@ jobs:
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::push reported no usable digest: $ref"; exit 1; }
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "CHARTWARDEN_RUST_IMAGE=$ref" | tee -a "$GITHUB_STEP_SUMMARY"
-          docker logout ghcr.io
+          # No logout here: cosign below reads the same docker credentials. The last step logs out.
 
       # Supply chain, same shape as upstream's deploy.yml release job (F-040/#100): SBOM, keyless sign, attest,
       # then verify what was just published so a signing misconfiguration is a red run here, not a refused deploy.
@@ -127,3 +127,6 @@ jobs:
           cosign verify-attestation "$IMAGE@$DIGEST" --type spdxjson \
             --certificate-identity "$identity" --certificate-oidc-issuer "$issuer" >/dev/null
           echo "verified $IMAGE@$DIGEST as $identity" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Log out of ghcr.io
+        if: always()
+        run: docker logout ghcr.io
