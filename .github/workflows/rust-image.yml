@@ -3,7 +3,8 @@
 # Manual only. Two modes:
 #   resolve-digests  print the current digests of the Dockerfile's base images, to pin them in rust/Dockerfile
 #   build-push       refuse unpinned bases, build, smoke-test, push ghcr.io/engrace-hospice/chartwarden-rust:sha-<commit>,
-#                    and print the pushed digest for upstream's CHARTWARDEN_RUST_IMAGE
+#                    and print the pushed digest for upstream's CHARTWARDEN_RUST_IMAGE; then SBOM, keyless cosign
+#                    signature + SBOM attestation on that digest, and a verify of both (P2 prerequisite 1)
 name: Rust image
 
 on:
@@ -48,6 +49,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # Keyless cosign signing: this OIDC token becomes a short-lived Fulcio certificate bound to this workflow's
+      # identity (no private key exists to store or leak). Only this job gets it.
+      id-token: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with: { persist-credentials: false }
@@ -67,11 +71,59 @@ jobs:
           echo "healthcheck without server -> $hc (want 1); bad key config -> $cfg (want 2); user=$uid (want 65532:1000)"
           [ "$hc" = 1 ] && [ "$cfg" = 2 ] && [ "$uid" = "65532:1000" ]
       - name: Push and record the digest
+        id: push
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           docker push "$IMAGE:sha-$GITHUB_SHA"
           ref=$(docker image inspect "$IMAGE:sha-$GITHUB_SHA" --format '{{index .RepoDigests 0}}')
+          # Everything below addresses the digest, never the tag: `sha-<commit>` is immutable by convention only.
+          digest=${ref#*@}
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::push reported no usable digest: $ref"; exit 1; }
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "CHARTWARDEN_RUST_IMAGE=$ref" | tee -a "$GITHUB_STEP_SUMMARY"
           docker logout ghcr.io
+
+      # Supply chain, same shape as upstream's deploy.yml release job (F-040/#100): SBOM, keyless sign, attest,
+      # then verify what was just published so a signing misconfiguration is a red run here, not a refused deploy.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      - name: Generate SBOM
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          syft "$IMAGE@$DIGEST" -o spdx-json=sbom-rust.spdx.json
+          # An SBOM that describes nothing answers "are we affected?" with a confident, wrong "no".
+          packages=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1])).get('packages',[])))" sbom-rust.spdx.json)
+          echo "sbom-rust.spdx.json: $packages package(s)"
+          test "$packages" -gt 0 || { echo "::error::SBOM describes no packages"; exit 1; }
+      # Best effort: the signed attestation below is the authoritative copy.
+      - name: Upload SBOM as a run artifact
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-rust-${{ github.sha }}
+          path: sbom-rust.spdx.json
+          retention-days: 90
+      - name: Sign image and attest SBOM
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          COSIGN_YES: "true"
+        run: |
+          cosign sign "$IMAGE@$DIGEST"
+          cosign attest --predicate sbom-rust.spdx.json --type spdxjson "$IMAGE@$DIGEST"
+      # The identity deploy.sh must trust for this image (and only this image):
+      #   https://github.com/Engrace-Hospice/chartwarden-rust/.github/workflows/rust-image.yml@refs/heads/main
+      - name: Verify the signature just created
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/rust-image.yml@${GITHUB_REF}"
+          issuer="https://token.actions.githubusercontent.com"
+          cosign verify "$IMAGE@$DIGEST" --certificate-identity "$identity" --certificate-oidc-issuer "$issuer" >/dev/null
+          cosign verify-attestation "$IMAGE@$DIGEST" --type spdxjson \
+            --certificate-identity "$identity" --certificate-oidc-issuer "$issuer" >/dev/null
+          echo "verified $IMAGE@$DIGEST as $identity" | tee -a "$GITHUB_STEP_SUMMARY"
