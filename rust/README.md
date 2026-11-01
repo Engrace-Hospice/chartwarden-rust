@@ -20,8 +20,7 @@ cargo build --locked
 cargo test --locked --workspace                      # unit tests, no database
 cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 cargo fmt --all --check
-cargo deny --locked check                            # licences, advisories, sources
-cargo audit --deny warnings
+scripts/supply-chain.sh                              # toolchain pin, build, fmt, clippy, cargo deny, cargo audit
 
 # Live tests: a migrated, EPHEMERAL, loopback PostgreSQL (e.g. the M00 catalog database).
 # They grant chartwarden_app LOGIN and rewrite fixture rows, and refuse non-loopback hosts.

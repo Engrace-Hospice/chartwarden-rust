@@ -1,0 +1,9 @@
+# cargo-audit reads Cargo.lock, which lists optional dependencies even when they are never compiled.
+[advisories]
+ignore = [
+  # RUSTSEC-2023-0071 (rsa, Marvin timing attack, no fixed version). `rsa` is in Cargo.lock only as a dependency of
+  # `sqlx-mysql`, which this workspace never enables (postgres only). Proof it is not built:
+  #   cargo tree -i rsa --all-features --target all   → "nothing to print"
+  # cargo-deny, which resolves features, reports no advisory. Remove this entry if `rsa` ever appears in `cargo tree`.
+  "RUSTSEC-2023-0071",
+]

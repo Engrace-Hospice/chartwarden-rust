@@ -31,7 +31,7 @@ Environment: PostgreSQL 18.6 + pgvector 0.8.7 (built from source), database migr
 | (end to end) | **pass** | Same suite, 10th test: signed request through the router on the real database returns exactly `{"permissions":["encounter.read","patient.read","visit.read"]}`; the same token again → 401. |
 | AT-M02-04 (Rust side) | **pass**, 26 + 4 tests | `cargo test -p cw-actor`: missing, oversized, malformed, `alg: none`, `alg: HS256`, `crit`/`jku`/wrong `typ`, unknown `kid`, wrong key, tampered payload, truncated signature, extra/missing claims, wrong `iss`/`aud`/method/path (incl. trailing slash), non-canonical UUIDs, empty `sid`/`cls`/`rid`, bad `jti`, lifetime > 30 s or ≤ 0, expiry and future `iat` at the skew boundary, **replay** (same token and same `jti` in a new token), forged token not consuming a replay slot, full replay cache fails closed and recovers, key rotation, key-config errors incl. small-order key. Server: duplicate header, cookie-only, other-path assertion. The header-overwrite and nginx parts are P1. |
 | AT-M02-05 | **pass**: 14 actors, 0 diffs | `verify:m02-parity`; output in `verification/output/m02/parity.json`. Actors cover staff, multi-org, disabled role, expired + future grants, suspended/revoked/pending, platform-owned role, reserved tenant rows, no membership, unknown org, and two portal session classes. Every Rust body is exactly `{permissions: unique strings}`, sorted, `application/json`. A planted defect (active-membership predicate removed) produced 3 diffs and exit 1. The web client's only consumer is `.includes("role.manage")` (`apps/web/src/modules/03-authorization/roles-permissions.tsx:60`), which is order-insensitive. |
-| AT-M02-07 | see below | `cargo build --locked`, `clippy -D warnings` (all targets, all features), `fmt --check`, `cargo deny`, `cargo audit`. |
+| AT-M02-07 | **pass** (image part → P1) | `rust/scripts/supply-chain.sh`, fail-closed. It checks the toolchain equals the pin (1.97.0), then runs `cargo build --locked`, `fmt --check`, `clippy -D warnings` (all targets and features), `cargo deny --locked check` (advisories, bans, licences, sources: all ok; 1,395-advisory database fetched) and `cargo audit --deny warnings`. One reasoned ignore, RUSTSEC-2023-0071 (`rsa`): it is in `Cargo.lock` only through `sqlx-mysql`, which is never compiled. The script fails if `rsa` ever enters `cargo tree`. |
 | AT-M02-08 | **pass**, 2 tests | `tests/logging.rs` (rejected and DB-error paths) and `tests/live_logging.rs` (200 path). No assertion, token segment, cookie or permission key in any log line. Ids, outcome and `permission_count` are logged. |
 
 ### Mutation check
@@ -77,7 +77,11 @@ Each of these deliberate breakages was applied, the relevant suite run, and the 
    verified. The image-digest half of AT-M02-07 moves to P1 with the compose service.
 5. **Parity is resolver-level.** AT-M02-05 compares upstream's real resolver (the function the route calls) with the
    Rust HTTP endpoint. It does not go through Bun's authentication or Fastify reply; that is AT-M02-05b in P1.
-6. **Test database.** Live tests and parity used the M00 catalog database (migrated at the pinned SHA), with
+6. **One advisory ignored, with a guard.** `cargo audit` reads `Cargo.lock`, which lists sqlx's unused MySQL driver
+   and its `rsa` dependency (RUSTSEC-2023-0071, no fix available). It is not compiled: `cargo tree -i rsa` is empty,
+   and feature-aware `cargo deny` reports nothing. The ignore lives in `rust/.cargo/audit.toml` with the proof, and
+   `supply-chain.sh` fails if `rsa` ever becomes part of the build.
+7. **Test database.** Live tests and parity used the M00 catalog database (migrated at the pinned SHA), with
    `chartwarden_app` granted LOGIN exactly as upstream's live suites do. Fixture organizations and users stay after a
    run, because `audit_event` references them and is append-only; grants, memberships and roles are replaced on
    every run.
