@@ -118,7 +118,7 @@ All of these must be done before shadow mode is switched on in production:
 3. Set `RUST_*` on `api`'s `environment:` only, never in `.env.production`.
 4. Recreate `postgres` once so it joins the internal `rust-db` network. This is a short planned database restart.
 5. Pass AT-M02-05b, 09, 10 and 11 on a real Bun + Rust stack. Include a connection test as uid 1000 to confirm the
-   socket file mode.
+   socket file mode. Harness: `verification/local-stack/run.sh` (see its README for what it does and does not prove).
 6. Prove that abandoned database work is cleaned up, not just that it stopped being waited for (ChatGPT round 2,
    finding B). The sweep's `bounded()` and the shadow recheck's `withTimeout()` give a hard *reporting* deadline, but
    the underlying driver call can keep running. For each sweep and recheck database path (the audited org
