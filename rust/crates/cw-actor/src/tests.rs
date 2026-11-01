@@ -442,3 +442,73 @@ fn a_session_cookie_alone_is_not_an_assertion() {
         Err(Rejection::Malformed)
     );
 }
+
+#[test]
+fn concurrent_presentations_of_one_token_are_accepted_exactly_once() {
+    // Review finding 1: the replay check and the insert happen under one lock, so racing threads cannot both win.
+    let v = std::sync::Arc::new(verifier());
+    let t = std::sync::Arc::new(sign(&good_claims(), KID, &key(1)));
+    let barrier = std::sync::Arc::new(std::sync::Barrier::new(16));
+    let handles: Vec<_> = (0..16)
+        .map(|_| {
+            let (v, t, b) = (v.clone(), t.clone(), barrier.clone());
+            std::thread::spawn(move || {
+                b.wait();
+                v.verify(Some(&t), &get(), NOW)
+            })
+        })
+        .collect();
+    let results: Vec<_> = handles
+        .into_iter()
+        .map(|h| h.join().expect("thread"))
+        .collect();
+    assert_eq!(results.iter().filter(|r| r.is_ok()).count(), 1);
+    assert!(
+        results
+            .iter()
+            .filter(|r| r.is_err())
+            .all(|r| *r == Err(Rejection::Replayed))
+    );
+}
+
+#[test]
+fn capacity_boundary_is_exact_and_replays_are_still_caught_when_full() {
+    let v = Verifier::with_replay_capacity(
+        KeyRing::from_keys([(KID.to_owned(), key(1).verifying_key())]),
+        3,
+    );
+    let tokens: Vec<String> = (0..3).map(|_| sign(&good_claims(), KID, &key(1))).collect();
+    for t in &tokens {
+        assert!(v.verify(Some(t), &get(), NOW).is_ok());
+    }
+    // Full: a replay is still reported as a replay (checked before capacity), a new token fails closed.
+    assert_eq!(
+        v.verify(Some(&tokens[0]), &get(), NOW),
+        Err(Rejection::Replayed)
+    );
+    assert_eq!(
+        v.verify(Some(&sign(&good_claims(), KID, &key(1))), &get(), NOW),
+        Err(Rejection::ReplayCacheFull)
+    );
+    // One second before the oldest entries are forgotten: still full.
+    let edge = NOW + 30 + SKEW_SECS;
+    let (u, o) = ids();
+    assert_eq!(
+        v.verify(
+            Some(&sign(&claims(u, o, PATH, edge - 5), KID, &key(1))),
+            &get(),
+            edge
+        ),
+        Err(Rejection::ReplayCacheFull)
+    );
+    // After they expire, space is reclaimed.
+    let later = edge + 1;
+    assert!(
+        v.verify(
+            Some(&sign(&claims(u, o, PATH, later), KID, &key(1))),
+            &get(),
+            later
+        )
+        .is_ok()
+    );
+}

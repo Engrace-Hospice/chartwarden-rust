@@ -68,7 +68,6 @@ struct LogFields {
     request_id: Option<String>,
     user_id: Option<String>,
     organization_id: Option<String>,
-    session_id: Option<String>,
     outcome: &'static str,
     permission_count: Option<usize>,
 }
@@ -95,7 +94,6 @@ async fn access_log(req: Request, next: Next) -> Response {
         rid = f.request_id.as_deref().unwrap_or(""),
         user_id = f.user_id.as_deref().unwrap_or(""),
         org_id = f.organization_id.as_deref().unwrap_or(""),
-        session_id = f.session_id.as_deref().unwrap_or(""),
         outcome = f.outcome,
         permission_count = f.permission_count,
         "request"
@@ -202,7 +200,6 @@ async fn me_permissions(State(state): State<Arc<AppState>>, req: Request) -> Res
         request_id: Some(actor.request_id.clone()),
         user_id: Some(actor.user_id.to_string()),
         organization_id: Some(actor.organization_id.to_string()),
-        session_id: Some(actor.session_id.clone()),
         outcome: "ok",
         permission_count: None,
     };

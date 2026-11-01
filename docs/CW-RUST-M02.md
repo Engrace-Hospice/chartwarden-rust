@@ -125,7 +125,7 @@ JWT library.
 | --- | --- |
 | `iss` / `aud` | `cw-bun` / `cw-rust` |
 | `sub` / `org` | user id / active organization id; both UUIDs, both required |
-| `sid`, `cls` | session id and session class; logged as ids, not used for decisions |
+| `sid`, `cls` | session id and session class; required non-empty, not logged, not used for decisions |
 | `mth`, `pth` | HTTP method and path; must equal the forwarded request |
 | `rid` | request id, which correlates Bun and Rust logs |
 | `jti` | single-use nonce |
@@ -173,7 +173,7 @@ rust/
 Permission keys are not PHI, but they are security-sensitive. Production logs carry:
 
 - request id, route, status and latency;
-- user, org and session ids;
+- user and org ids (not the session id; the request id correlates Bun and Rust);
 - outcome (`match`, `explained:stale-cache`, `unexplained`, `fallback:<reason>`);
 - the size of each set and a SHA-256 of each sorted set;
 - for `unexplained` only, the **count** of keys only in Bun and only in Rust.
@@ -192,7 +192,8 @@ PostgreSQL (the M00 catalog setup), plus parity against a local Bun stack using 
 - the assertion signer and forwarder;
 - `RUST_ROUTES` (empty by default) and `RUST_ROUTE_MODE=shadow|serve`;
 - a `rust` compose service: digest-pinned, `mem_limit`/`cpus`, UDS volume shared only with `api`, health check;
-- a `controls.yaml` row for the new trust boundary.
+- a `controls.yaml` row for the new trust boundary;
+- exactly one Rust replica (no `scale`, no `deploy.replicas > 1`), because the `jti` replay cache is per process.
 
 It must pass upstream's `arch:fitness`, `arch:compose-policy` and `arch:request-header-auth`, the compliance review,
 and an independent review of the authentication boundary. Upstream tests are not modified; new tests are added and

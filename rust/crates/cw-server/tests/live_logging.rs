@@ -92,6 +92,7 @@ async fn a_successful_request_logs_ids_and_a_count_but_no_permission_key() {
         "visit.read",
         "encounter.read",
         "SECRETCOOKIE",
+        "test-session", // the session id (sid) is not logged; rid correlates instead
         token.as_str(),
     ] {
         assert!(!logs.contains(leaked), "log leaked {leaked:?}");

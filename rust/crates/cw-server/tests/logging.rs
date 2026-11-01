@@ -105,7 +105,7 @@ async fn logs_never_contain_the_assertion_or_cookie() {
         logs.contains("\"route\":\"/api/v1/me/permissions\""),
         "access log present: {logs}"
     );
-    for secret in [good.as_str(), bad.as_str(), "SECRETCOOKIE"] {
+    for secret in [good.as_str(), bad.as_str(), "SECRETCOOKIE", "test-session"] {
         assert!(!logs.contains(secret), "log leaked a secret");
     }
     // No fragment of a token either (header, payload or signature segment).

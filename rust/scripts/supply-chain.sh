@@ -15,8 +15,15 @@ cargo deny --locked check
 cargo audit --deny warnings
 
 # The cargo-audit ignore for RUSTSEC-2023-0071 is valid only while `rsa` is not compiled.
-# (`cargo tree -i` exits 0 with "nothing to print" when the crate is absent, so inspect the output.)
-if cargo tree -i rsa --all-features --target all 2>/dev/null | grep -q '^rsa v'; then
+# Fail closed: if the dependency graph cannot be inspected, the gate fails. `cargo tree -i` exits 0 and prints
+# "nothing to print" when the crate is absent, so we check the exit status first, then the package list.
+if ! tree_out=$(cargo tree --locked -i rsa --all-features --target all --prefix none --format '{p}' 2>&1); then
+  echo "cannot inspect the dependency graph (cargo tree failed):"; echo "$tree_out"; exit 1
+fi
+if grep -qE '^rsa v' <<<"$tree_out"; then
   echo "rsa is now part of the build: remove the RUSTSEC-2023-0071 ignore and deal with the advisory"; exit 1
+fi
+if ! grep -q 'nothing to print' <<<"$tree_out"; then
+  echo "unexpected cargo tree output; refusing to assume rsa is absent:"; echo "$tree_out"; exit 1
 fi
 echo "supply chain: ok (toolchain $have)"

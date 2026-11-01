@@ -93,7 +93,9 @@ async fn main() {
     }
 
     let path = std::env::var("CW_RUST_SOCKET").unwrap_or_else(|_| DEFAULT_SOCKET.to_owned());
-    let listener = bind_socket(&path).unwrap_or_else(|e| fail(&format!("cannot bind {path}: {e}")));
+    // `_lock` is held until the process exits.
+    let (listener, _lock) =
+        bind_socket(&path).unwrap_or_else(|e| fail(&format!("cannot bind {path}: {e}")));
     tracing::info!(target: "cw_server::startup", socket = %path, "listening (unix socket)");
     let served = axum::serve(listener, app)
         .with_graceful_shutdown(shutdown())
@@ -105,22 +107,47 @@ async fn main() {
 }
 
 /// Binds the Unix socket with mode 0660 (owner and group: the `api` container shares the group).
-/// A stale socket from a previous run is replaced; any other file at the path is left alone and refused.
-fn bind_socket(path: &str) -> std::io::Result<tokio::net::UnixListener> {
+///
+/// Single instance per socket path (review finding P1-3/P1-4):
+/// 1. take an exclusive `flock` on `<path>.lock`, held for the life of the process; a second instance fails here;
+/// 2. if a socket file still exists, probe it: a live listener means something else is serving, so refuse;
+///    only a dead (stale) socket is removed;
+/// 3. any non-socket file at the path is refused, never deleted.
+fn bind_socket(path: &str) -> std::io::Result<(tokio::net::UnixListener, std::fs::File)> {
     use std::os::unix::fs::{FileTypeExt, PermissionsExt};
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(format!("{path}.lock"))?;
+    match lock.try_lock() {
+        Ok(()) => {}
+        Err(std::fs::TryLockError::WouldBlock) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::AddrInUse,
+                "another cw-server instance holds this socket's lock",
+            ));
+        }
+        Err(std::fs::TryLockError::Error(e)) => return Err(e),
+    }
     if let Ok(meta) = std::fs::symlink_metadata(path) {
-        if meta.file_type().is_socket() {
-            std::fs::remove_file(path)?;
-        } else {
+        if !meta.file_type().is_socket() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
                 "path exists and is not a socket",
             ));
         }
+        if std::os::unix::net::UnixStream::connect(path).is_ok() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::AddrInUse,
+                "a live listener is already serving this socket",
+            ));
+        }
+        std::fs::remove_file(path)?;
     }
     let listener = tokio::net::UnixListener::bind(path)?;
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o660))?;
-    Ok(listener)
+    Ok((listener, lock))
 }
 
 async fn shutdown() {

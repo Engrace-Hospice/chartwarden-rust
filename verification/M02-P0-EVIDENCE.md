@@ -1,7 +1,8 @@
 # CW-RUST-M02 P0 — evidence
 
-Built by Claude, reviewed by ChatGPT, accepted by the owner. Spec: `docs/CW-RUST-M02.md` v0.2. Upstream pin:
-`Engrace-Hospice/chartwarden@9e0899a`. Recorded 2026-10-31.
+**Status: submitted for independent review; owner acceptance pending.** Built by Claude. First review by ChatGPT
+(static, did not execute the code) returned ACCEPT WITH FIXES; the fixes are listed under "Review round 1". Spec:
+`docs/CW-RUST-M02.md` v0.2. Upstream pin: `Engrace-Hospice/chartwarden@9e0899a`. Recorded 2026-10-31.
 
 ## Gate 0
 
@@ -29,14 +30,14 @@ Environment: PostgreSQL 18.6 + pgvector 0.8.7 (built from source), database migr
 | AT-M02-02 | **pass**, 8 of the 10 live tests | `cargo test -p cw-server --features live --test live`, connected as `chartwarden_app`: (a) multi-org; (b) suspended/revoked/pending; (c) unset GUC → 0 rows; (d) reused connection, GUC `''` → `22P02` on `membership_role`/`role`/`role_permission`, 0 rows on `membership`; (e) malformed id → `22P02`; (f) GUC org B, predicate org A → nothing; (g) one pooled connection A→B→A; (h) role `NOBYPASSRLS`, not superuser, not owner; all four tables FORCE RLS. A superuser pool is refused at startup. |
 | AT-M02-03 | **pass** | Same suite: `INSERT` inside an org transaction → `25006`; `SET TRANSACTION READ WRITE` afterwards is refused. |
 | (end to end) | **pass** | Same suite, 10th test: signed request through the router on the real database returns exactly `{"permissions":["encounter.read","patient.read","visit.read"]}`; the same token again → 401. |
-| AT-M02-04 (Rust side) | **pass**, 26 + 4 tests | `cargo test -p cw-actor`: missing, oversized, malformed, `alg: none`, `alg: HS256`, `crit`/`jku`/wrong `typ`, unknown `kid`, wrong key, tampered payload, truncated signature, extra/missing claims, wrong `iss`/`aud`/method/path (incl. trailing slash), non-canonical UUIDs, empty `sid`/`cls`/`rid`, bad `jti`, lifetime > 30 s or ≤ 0, expiry and future `iat` at the skew boundary, **replay** (same token and same `jti` in a new token), forged token not consuming a replay slot, full replay cache fails closed and recovers, key rotation, key-config errors incl. small-order key. Server: duplicate header, cookie-only, other-path assertion. The header-overwrite and nginx parts are P1. |
-| AT-M02-05 | **pass**: 14 actors, 0 diffs | `verify:m02-parity`; output in `verification/output/m02/parity.json`. Actors cover staff, multi-org, disabled role, expired + future grants, suspended/revoked/pending, platform-owned role, reserved tenant rows, no membership, unknown org, and two portal session classes. Every Rust body is exactly `{permissions: unique strings}`, sorted, `application/json`. A planted defect (active-membership predicate removed) produced 3 diffs and exit 1. The web client's only consumer is `.includes("role.manage")` (`apps/web/src/modules/03-authorization/roles-permissions.tsx:60`), which is order-insensitive. |
+| AT-M02-04 (Rust side) | **pass**, 28 + 4 tests | `cargo test -p cw-actor`: missing, oversized, malformed, `alg: none`, `alg: HS256`, `crit`/`jku`/wrong `typ`, unknown `kid`, wrong key, tampered payload, truncated signature, extra/missing claims, wrong `iss`/`aud`/method/path (incl. trailing slash), non-canonical UUIDs, empty `sid`/`cls`/`rid`, bad `jti`, lifetime > 30 s or ≤ 0, expiry and future `iat` at the skew boundary, **replay** (same token and same `jti` in a new token), 16 threads racing one token (exactly one accepted), forged token not consuming a replay slot, exact capacity boundary (a replay is still reported as a replay when full; a new token fails closed until entries expire), key rotation, key-config errors incl. small-order key. Server: duplicate header, cookie-only, other-path assertion. The header-overwrite and nginx parts are P1. |
+| AT-M02-05 | **pass**: 19 actors, 0 diffs | `verify:m02-parity`; output in `verification/output/m02/parity.json`. Actors cover staff, multi-org, disabled role, expired + future grants, suspended/revoked/pending, platform-owned role, reserved tenant rows, no membership, unknown org, two portal session classes, a key reachable through an expired and a permanent grant, a disabled and an enabled role sharing a key, a tenant role with an `organization_id NULL` `role_permission` row, and a grant row stamped with another org. Every Rust body is exactly `{permissions: unique strings}`, sorted, `application/json`. A planted defect (active-membership predicate removed) produced 3 diffs and exit 1. The web client's only consumer is `.includes("role.manage")` (`apps/web/src/modules/03-authorization/roles-permissions.tsx:60`), which is order-insensitive. |
 | AT-M02-07 | **pass** (image part → P1) | `rust/scripts/supply-chain.sh`, fail-closed. It checks the toolchain equals the pin (1.97.0), then runs `cargo build --locked`, `fmt --check`, `clippy -D warnings` (all targets and features), `cargo deny --locked check` (advisories, bans, licences, sources: all ok; 1,395-advisory database fetched) and `cargo audit --deny warnings`. One reasoned ignore, RUSTSEC-2023-0071 (`rsa`): it is in `Cargo.lock` only through `sqlx-mysql`, which is never compiled. The script fails if `rsa` ever enters `cargo tree`. |
-| AT-M02-08 | **pass**, 2 tests | `tests/logging.rs` (rejected and DB-error paths) and `tests/live_logging.rs` (200 path). No assertion, token segment, cookie or permission key in any log line. Ids, outcome and `permission_count` are logged. |
+| AT-M02-08 | **pass**, 2 tests | `tests/logging.rs` (rejected and DB-error paths) and `tests/live_logging.rs` (200 path). No assertion, token segment, cookie or permission key in any log line. Request id, user and org ids, outcome and `permission_count` are logged; the session id is no longer logged (review round 1). |
 
 ### Mutation check
 
-Each of these deliberate breakages was applied, the relevant suite run, and the source restored. **All 14 were caught:**
+Each of these deliberate breakages was applied, the relevant suite run, and the source restored. Re-run after review round 1. **All 15 were caught:**
 
 - dropping the `status = 'active'` predicate;
 - dropping the `roleConfersKey` filter;
@@ -51,7 +52,8 @@ Each of these deliberate breakages was applied, the relevant suite run, and the 
 - accepting any `alg`;
 - skipping expiry;
 - accepting duplicate headers;
-- accepting any database role at startup.
+- accepting any database role at startup;
+- logging the session id.
 
 ### Binary smoke test
 
@@ -85,6 +87,22 @@ Each of these deliberate breakages was applied, the relevant suite run, and the 
    `chartwarden_app` granted LOGIN exactly as upstream's live suites do. Fixture organizations and users stay after a
    run, because `audit_event` references them and is append-only; grants, memberships and roles are replaced on
    every run.
+
+## Review round 1 (ChatGPT, static review)
+
+| # | Finding | Assessment | Change |
+| --- | --- | --- | --- |
+| 1 | Replay cache: full cache denies valid requests (availability) | Real. Not a blocker: only Bun can mint assertions, and a 401 from Rust makes Bun serve its own answer, so users see no failure | Added a 16-thread race test (exactly one acceptance) and an exact capacity-boundary test. Capacity math: 100,000 entries over a 35 s window holds ≈ 2,857 assertions/s sustained, orders of magnitude above this endpoint's traffic. Every full-cache refusal logs `reason=replay_cache_full`, which is the metric to alert on in P2 |
+| 2 | Parity/live tests mutate a database that is only proven loopback | Real | Both now refuse any database without `COMMENT ON DATABASE … IS 'cw-ephemeral-test-db'`, and any name containing prod/production/live/primary. Refusal verified on both. Destroy the database (or cluster) after use: `ALTER ROLE chartwarden_app LOGIN` is cluster-wide |
+| 3 | Stale-socket replacement could remove a live instance's socket | Real | Exclusive `flock` on `<socket>.lock` held for the process lifetime. A socket that still answers is refused; only a dead socket is removed; a non-socket file is refused. All four cases exercised by hand (second instance, stale, foreign live listener, regular file) |
+| 4 | Replay cache is per process | Known, accepted in the spec for one instance | The lock in #3 enforces one instance per socket on a host. **P1 requirement:** the compose service runs exactly one replica (no `scale`, no `deploy.replicas > 1`) until replay state is shared |
+| 5 | Session id in logs | Valid hardening | Removed from the access log; the request id correlates. Both logging tests now assert the session id never appears. Spec Logging section updated |
+| 6 | Parity coverage | Fair | Five actors added (now 19), all matching. A duplicate grant of the same role is impossible by schema (`membership_role_idx` is unique). An expiry crossing mid-request is not deterministic to fixture; both sides read `now` after loading grants and compare at millisecond precision (unit-tested) |
+| 7 | Supply-chain guard could fail open if `cargo tree` errors | Real | `cargo tree` output is captured, a non-zero exit fails the gate, and anything other than a clean "nothing to print" fails it too |
+| 8 | Evidence claimed owner acceptance | Real | Status line corrected above |
+
+Found while fixing: the live tests' `user(n)` helper built ids by hex addition, which only matched the fixtures for
+users 1–9. It now formats the decimal id like the fixtures and the parity script do.
 
 ## How to reproduce
 

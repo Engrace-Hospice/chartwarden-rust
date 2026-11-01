@@ -99,7 +99,7 @@ async fn startup_check_refuses_a_superuser_connection() {
 #[tokio::test]
 async fn ab_each_fixture_actor_gets_exactly_its_effective_set() {
     let pool = app_pool(2).await;
-    let cases: [(u128, Uuid, &[&str]); 11] = [
+    let cases: [(u128, Uuid, &[&str]); 16] = [
         (1, ORG_A, &["encounter.read", "patient.read", "visit.read"]), // union of rn + scheduler
         (1, ORG_B, &["role.read"]), // (a) same user, other org: only B's keys
         (2, ORG_A, &[]),            // disabled role
@@ -111,6 +111,11 @@ async fn ab_each_fixture_actor_gets_exactly_its_effective_set() {
         (8, ORG_A, &[]),            // no membership
         (9, ORG_A, &[]),            // pending membership
         (2, ORG_B, &[]),            // no membership in B
+        (10, ORG_A, &["encounter.read", "visit.read"]), // visit.read survives via the permanent grant
+        (11, ORG_A, &["role.manage"]),                  // disabled + enabled role share a key
+        (12, ORG_A, &["audit.read", "patient.read"]), // role_permission row with organization_id NULL counts
+        (13, ORG_A, &[]),                             // grant row stamped org B: hidden under A
+        (13, ORG_B, &[]),                             // and no membership in B
     ];
     for (u, org, want) in cases {
         assert_eq!(

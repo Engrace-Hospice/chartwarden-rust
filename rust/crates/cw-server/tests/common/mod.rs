@@ -8,8 +8,11 @@ use uuid::Uuid;
 pub const ORG_A: Uuid = Uuid::from_u128(0xf0000000_0000_4000_8000_00000000000a);
 pub const ORG_B: Uuid = Uuid::from_u128(0xf0000000_0000_4000_8000_00000000000b);
 
+/// Fixture user `n` is `f0000000-0000-4000-8002-` followed by `n` in **decimal**, zero-padded to 12 digits
+/// (matching m02.sql and the parity script), e.g. user(10) = …-000000000010.
 pub fn user(n: u128) -> Uuid {
-    Uuid::from_u128(0xf0000000_0000_4000_8002_000000000000 + n)
+    Uuid::parse_str(&format!("f0000000-0000-4000-8002-{n:012}"))
+        .unwrap_or_else(|_| panic!("bad fixture user {n}"))
 }
 
 /// Same password upstream's live suites use (`apps/backend/__tests__/_live-app-role.ts`).
@@ -44,6 +47,32 @@ pub async fn admin_pool() -> PgPool {
         .unwrap_or_else(|e| panic!("admin connect: {e}"))
 }
 
+/// The database must be explicitly designated disposable (review finding 2): loopback alone does not prove it.
+/// Designate one with `COMMENT ON DATABASE <name> IS 'cw-ephemeral-test-db';` and destroy it after use.
+pub const EPHEMERAL_MARKER: &str = "cw-ephemeral-test-db";
+
+pub async fn assert_ephemeral(admin: &PgPool) {
+    let (name, comment): (String, Option<String>) = sqlx::query_as(
+        "SELECT d.datname::text, shobj_description(d.oid, 'pg_database') \
+           FROM pg_database d WHERE d.datname = current_database()",
+    )
+    .fetch_one(admin)
+    .await
+    .unwrap_or_else(|e| panic!("read database comment: {e}"));
+    let lower = name.to_lowercase();
+    assert!(
+        !["prod", "production", "live", "primary"]
+            .iter()
+            .any(|w| lower.contains(w)),
+        "refusing database {name:?}: its name looks like a real environment"
+    );
+    assert_eq!(
+        comment.as_deref(),
+        Some(EPHEMERAL_MARKER),
+        "refusing database {name:?}: not designated disposable. Run: COMMENT ON DATABASE {name} IS '{EPHEMERAL_MARKER}';"
+    );
+}
+
 /// Seeds fixtures and grants `chartwarden_app` LOGIN, once per test binary.
 pub async fn seed() {
     let mut done = SEEDED.lock().await;
@@ -51,6 +80,7 @@ pub async fn seed() {
         return;
     }
     let admin = admin_pool().await;
+    assert_ephemeral(&admin).await;
     let mut tx = admin.begin().await.unwrap_or_else(|e| panic!("begin: {e}"));
     sqlx::raw_sql(FIXTURES)
         .execute(&mut *tx)
