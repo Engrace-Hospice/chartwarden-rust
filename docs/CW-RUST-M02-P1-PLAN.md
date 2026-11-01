@@ -119,4 +119,13 @@ All of these must be done before shadow mode is switched on in production:
 4. Recreate `postgres` once so it joins the internal `rust-db` network. This is a short planned database restart.
 5. Pass AT-M02-05b, 09, 10 and 11 on a real Bun + Rust stack. Include a connection test as uid 1000 to confirm the
    socket file mode.
-6. Owner go-ahead.
+6. Prove that abandoned database work is cleaned up, not just that it stopped being waited for (ChatGPT round 2,
+   finding B). The sweep's `bounded()` and the shadow recheck's `withTimeout()` give a hard *reporting* deadline, but
+   the underlying driver call can keep running. For each sweep and recheck database path (the audited org
+   enumerator, the member list, the member count, and the uncached permission resolver), show one of:
+   - a connection-acquisition timeout plus a statement timeout that ends the call within a stated bound; or
+   - an abort signal propagated to the driver.
+
+   Where neither is possible, cap outstanding abandoned operations and alert on the summary's `abandoned` counter
+   (logged since upstream `d07489e`). The daily sweep stays disabled until this is done.
+7. Owner go-ahead.

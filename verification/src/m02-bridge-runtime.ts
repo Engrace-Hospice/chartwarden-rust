@@ -5,12 +5,14 @@
  *
  * Unit tests inject `fetch`; this runs upstream's real `createRustClient` and `createMePermissionsBridge` under Bun's
  * real Unix-socket fetch, against raw socket servers that:
- *   1. accept and never answer               → `timeout` within budget, connection closed by the client
+ *   1. accept and never answer               → `timeout` within budget, connection closed
  *   2. send headers, part of a body, stall   → `timeout` within budget, connection closed
  *   3. stream an endless chunked body        → `bad_json` (byte cap) well before the timeout, connection closed
  *   4. close at once                         → `connect`/`bad_json`, never a throw
  *   5. no socket file                        → `connect`
  * and checks that serve mode answers from Bun in each case, with no unhandled rejection. Exit 1 on any failure.
+ *
+ * "Connection closed" means the server saw the socket close. It does not prove which side closed it.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -92,9 +94,9 @@ async function main() {
     const t0 = performance.now();
     const r = await client.get("/api/v1/me/permissions", "h.p.s");
     const ms = Math.round(performance.now() - t0);
-    await Bun.sleep(100); // let the server observe the client closing the connection
-    const closedByClient = srv ? srv.state.closed === srv.state.opened && srv.state.opened > 0 : true;
-    check(`client vs ${behaviour}`, !r.ok && expected.includes(r.reason) && ms <= budget && closedByClient, {
+    await Bun.sleep(100); // let the server observe the connection closing (either side)
+    const connectionClosed = srv ? srv.state.closed === srv.state.opened && srv.state.opened > 0 : true;
+    check(`client vs ${behaviour}`, !r.ok && expected.includes(r.reason) && ms <= budget && connectionClosed, {
       result: r.ok ? "ok" : r.reason, ms, budget, connections: srv?.state,
     });
 
