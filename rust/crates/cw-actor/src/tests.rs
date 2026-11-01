@@ -512,3 +512,81 @@ fn capacity_boundary_is_exact_and_replays_are_still_caught_when_full() {
         .is_ok()
     );
 }
+
+// ---- Sweep fence (spec v0.3, AT-M02-11 Rust side) ----
+
+#[test]
+fn a_sweep_assertion_is_accepted_on_the_permissions_route() {
+    let c = with(good_claims(), "cls", json!(SWEEP_CLASS));
+    assert!(check(&sign(&c, KID, &key(1))).is_ok());
+}
+
+#[test]
+fn a_sweep_assertion_is_refused_on_any_other_route_even_when_correctly_bound() {
+    let v = verifier();
+    for (m, p) in [
+        ("GET", "/api/v1/me/session"),
+        ("POST", PATH),
+        ("GET", "/api/v1/patients"),
+    ] {
+        let c = with(
+            with(
+                with(good_claims(), "cls", json!(SWEEP_CLASS)),
+                "mth",
+                json!(m),
+            ),
+            "pth",
+            json!(p),
+        );
+        assert_eq!(
+            v.verify(
+                Some(&sign(&c, KID, &key(1))),
+                &Binding { method: m, path: p },
+                NOW
+            ),
+            Err(Rejection::SweepNotAllowed),
+            "{m} {p}"
+        );
+    }
+}
+
+#[test]
+fn a_refused_sweep_assertion_does_not_consume_a_replay_slot() {
+    let v = verifier();
+    let c = with(
+        with(good_claims(), "cls", json!(SWEEP_CLASS)),
+        "pth",
+        json!("/api/v1/other"),
+    );
+    let t = sign(&c, KID, &key(1));
+    let other = Binding {
+        method: "GET",
+        path: "/api/v1/other",
+    };
+    assert_eq!(
+        v.verify(Some(&t), &other, NOW),
+        Err(Rejection::SweepNotAllowed)
+    );
+    assert_eq!(
+        v.verify(Some(&t), &other, NOW),
+        Err(Rejection::SweepNotAllowed),
+        "not Replayed"
+    );
+}
+
+/// Cross-language golden vector, produced by upstream's Bun signer
+/// (`apps/backend/src/bootstrap/rust-bridge/__tests__/signer-config.test.ts`, "reproduces the cross-language golden
+/// vector"). If either side changes the header, claim names, claim order or encoding, one of the two tests fails.
+#[test]
+fn accepts_the_bun_signer_golden_vector() {
+    const PUB: &str = "6kpsY-KcUgq-9VB7Ey7F-ZVHdq6-vnuSQh7qaRRG0iw";
+    const TOKEN: &str = "eyJhbGciOiJFZERTQSIsImtpZCI6InZlYyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjdy1idW4iLCJhdWQiOiJjdy1ydXN0Iiwic3ViIjoiMTExMTExMTEtMTExMS00MTExLTgxMTEtMTExMTExMTExMTExIiwib3JnIjoiMjIyMjIyMjItMjIyMi00MjIyLTgyMjItMjIyMjIyMjIyMjIyIiwic2lkIjoicy0xIiwiY2xzIjoic3RhZmYiLCJtdGgiOiJHRVQiLCJwdGgiOiIvYXBpL3YxL21lL3Blcm1pc3Npb25zIiwicmlkIjoici0xIiwianRpIjoicTZ1cnE2dXJxNnVycTZ1cnE2dXJxdyIsImlhdCI6MTgwMDAwMDAwMCwiZXhwIjoxODAwMDAwMDMwfQ.UIotSSkL2hLtGC00l7a8SyX9l3xePbSdZ2nm5j5nF_B29xKUouQ4rwYoE1tdGm59LFVICUvTEkC-ujPx-Sc9Aw";
+    let v = Verifier::new(KeyRing::parse(&format!("vec={PUB}")).expect("ring"));
+    let actor = v
+        .verify(Some(TOKEN), &get(), 1_800_000_000)
+        .expect("Bun's token must verify");
+    let (u, o) = ids();
+    assert_eq!((actor.user_id, actor.organization_id), (u, o));
+    assert_eq!(actor.session_class, "staff");
+    assert_eq!(actor.request_id, "r-1");
+}

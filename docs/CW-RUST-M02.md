@@ -225,8 +225,10 @@ enter the stored inventory as additions.
 low-traffic hour, a job in the `api` process (the only holder of the signing key and the socket) compares Bun and Rust
 for **every active membership**:
 
-1. List `(organization_id, user_id)` for all `active` memberships through upstream's gated `withPlatformContext`
-   (a newly registered platform job, cross-tenant, audited). This list is the only cross-tenant read.
+1. List active **organizations** through upstream's existing audited platform enumerator
+   (`buildActiveOrgEnumerator`, newly registered job `m02-rust-parity-sweep`). That is the only cross-tenant read.
+   Each org's active members are then listed, and independently counted, under that org's own `withOrgContext`
+   (RLS-scoped, `chartwarden_app`), so no new cross-tenant access to `membership` is needed.
 2. For each pair, in order and at most 2 in flight: Bun resolves through a **fresh, uncached** resolver under
    `withOrgContext`; Rust is called over the socket with an assertion whose `cls` is `parity-sweep`, `sid` is the run
    id, and `mth`/`pth` are `GET /api/v1/me/permissions`.

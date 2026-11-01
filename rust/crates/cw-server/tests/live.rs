@@ -371,3 +371,37 @@ async fn endpoint_returns_the_sorted_set_and_rejects_a_replay() {
     let replay = app.oneshot(req()).await.unwrap_or_else(|_| unreachable!());
     assert_eq!(replay.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[tokio::test]
+async fn a_sweep_assertion_reads_permissions_end_to_end() {
+    let pool = app_pool(1).await;
+    let key = SigningKey::from_bytes(&[6; 32]);
+    let app = router(Arc::new(AppState {
+        verifier: Verifier::new(KeyRing::from_keys([("k".to_owned(), key.verifying_key())])),
+        pool,
+        version: VersionInfo {
+            version: "t".into(),
+            git_sha: "t".into(),
+            build_time: "t".into(),
+        },
+    }));
+    let mut c = claims(user(1), ORG_A, PERMISSIONS_PATH, now_unix());
+    c["cls"] = serde_json::json!(cw_actor::SWEEP_CLASS);
+    c["sid"] = serde_json::json!("sweep-run-1");
+    let req = Request::get(PERMISSIONS_PATH)
+        .header(HEADER_NAME, sign(&c, "k", &key))
+        .body(Body::empty())
+        .unwrap_or_default();
+    let res = app.oneshot(req).await.unwrap_or_else(|_| unreachable!());
+    assert_eq!(res.status(), StatusCode::OK);
+    let bytes = res
+        .into_body()
+        .collect()
+        .await
+        .map(|b| b.to_bytes())
+        .unwrap_or_default();
+    assert_eq!(
+        &bytes[..],
+        br#"{"permissions":["encounter.read","patient.read","visit.read"]}"#
+    );
+}
