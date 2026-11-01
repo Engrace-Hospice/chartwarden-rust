@@ -14,6 +14,14 @@ evidence for this phase is `verification/M02-P0-EVIDENCE.md`.
 
 ## Commands
 
+Everything below in one go, on your own machine with Docker (a throwaway database, removed afterwards):
+
+```sh
+./scripts/m02-local-check.sh        # writes verification/output/m02/local-report.txt
+```
+
+Individually:
+
 ```sh
 cd rust
 cargo build --locked
